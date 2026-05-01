@@ -11,8 +11,8 @@ bridge, and executes only whitelisted actions in game.
 - Commands include `/mcai status`, `/mcai ask <message>`, `/mcai scan`, and `/mcai npc ...`.
 - Bridge endpoint defaults to `http://127.0.0.1:8787/bridge/decide`.
 - Bundled NPC profiles and player-model skins live in `npc_profiles.example.json` and `src/main/resources/assets/mc_ai_companion/textures/entity`.
-- Safe actions are explicitly mapped in code: `none`, `say`, `ask_clarifying_question`, `propose_plan`, `report_status`, `report_nearby`, `report_inventory`, `come_to_player`, `follow_player`, `guard_player`, `protect_player`, `stop_guard`, `stop`, `goto_position`, `collect_items`, `mine_nearby_ore`, `harvest_logs`, `build_basic_house`, `build_large_house`, `craft_item`, `craft_at_table`, `craft_from_chest_at_table`, `equip_best_gear`, `remember`, and `recall`.
-- Work tasks are constrained to nearby dropped items, exposed ores/logs, simple building, crafting, equipment, memory, movement, following, and hostile-only protection.
+- Safe actions are explicitly mapped in code: `none`, `say`, `ask_clarifying_question`, `propose_plan`, `report_status`, `report_nearby`, `report_inventory`, `report_resources`, `survival_assist`, `till_field`, `plant_crop`, `harvest_crops`, `hunt_food_animal`, `feed_animal`, `breed_animals`, `tame_animal`, `build_redstone_template`, `come_to_player`, `follow_player`, `guard_player`, `protect_player`, `stop_guard`, `stop`, `goto_position`, `collect_items`, `mine_nearby_ore`, `gather_stone`, `harvest_logs`, `build_basic_house`, `build_large_house`, `repair_structure`, `craft_item`, `craft_at_table`, `craft_from_chest_at_table`, `equip_best_gear`, `remember`, and `recall`.
+- Work tasks are constrained to nearby dropped items, exposed ores/logs, mature crops, small starter fields, approved animal interactions, template-only redstone, simple building, crafting, equipment, memory, movement, following, and hostile-only protection.
 - Building and crafting use NPC storage, self-gathered materials, or player-approved nearby containers. Player inventory is not consumed.
 - Guard radius is clamped, hostile targeting ignores players, and attacks are cooldown-limited.
 
@@ -142,6 +142,9 @@ set the same value in the generated NeoForge config before testing.
 /mcai ask mine nearby exposed ores
 /mcai ask harvest nearby logs
 /mcai ask build a simple shelter with nearby blocks
+/mcai ask help me survive
+/mcai ask harvest mature crops
+/mcai ask build a pressure door template
 ```
 
 Mention-based chat examples:
@@ -150,6 +153,9 @@ Mention-based chat examples:
 CodexBot, scan nearby hostile mobs
 !ai scan nearby hostile mobs
 Build a small shelter.
+帮我活下去
+收成熟小麦
+造一个压力板自动门
 造一个小避难所
 ```
 
@@ -181,7 +187,17 @@ GET  /observation?player=<name>
 POST /voice/transcript?player=<name>&text=<spoken text>
 POST /test/chest?player=<name>
 POST /test/all?player=<name>
+POST /action/survival_assist?player=<name>
 POST /action/harvest_logs?player=<name>&radius=16&seconds=90
+POST /action/gather_stone?player=<name>&radius=16&count=3
+POST /action/till_field?player=<name>&radius=8
+POST /action/plant_crop?player=<name>&crop=wheat&radius=8
+POST /action/harvest_crops?player=<name>&radius=12
+POST /action/hunt_food_animal?player=<name>&animal=cow&radius=16
+POST /action/feed_animal?player=<name>&animal=cow&radius=16
+POST /action/breed_animals?player=<name>&animal=cow&radius=16
+POST /action/tame_animal?player=<name>&animal=wolf&radius=16
+POST /action/build_redstone_template?player=<name>&template=pressure_door
 POST /action/build_basic_house?player=<name>
 POST /action/stop?player=<name>
 POST /action/come?player=<name>

@@ -27,6 +27,7 @@ public final class ObservationFrame {
         perception.add("nearbyBlocks", AgentJson.array(context, "nearbyBlocks"));
         perception.add("nearbyContainers", AgentJson.array(context, "nearbyContainers"));
         perception.add("objects", copy(context, "objects"));
+        perception.add("survivalEnvironment", copy(context, "survivalEnvironment"));
         perception.add("modded", copy(context, "modded"));
         perception.add("currentObservation", copy(worldKnowledge, "currentObservation"));
         frame.add("perception", perception);
@@ -61,6 +62,8 @@ public final class ObservationFrame {
         policies.addProperty("playerInventoryMaterials", false);
         policies.addProperty("chestMaterialsRequireApproval", true);
         policies.addProperty("neverAttackPlayers", true);
+        policies.addProperty("neverAttackVillagersPetsNamedOrFencedAnimals", true);
+        policies.addProperty("highAutonomySafeActionsOnlyWithoutPermission", true);
         policies.addProperty("boundedExplorationOnly", true);
         policies.addProperty("worldChangingActionsRequireWhitelistedAction", true);
         policies.addProperty("complexTasksMustBePauseableRecoverableExplainable", true);

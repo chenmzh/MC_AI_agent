@@ -28,4 +28,7 @@ function Invoke-DevTestJson {
 
 Invoke-DevTestJson -Method GET -Path "/health"
 Invoke-DevTestJson -Method GET -Path "/state"
+Invoke-DevTestJson -Method GET -Path "/observation"
+Invoke-DevTestJson -Method GET -Path "/skills"
 Invoke-DevTestJson -Method POST -Path "/test/chest"
+Invoke-DevTestJson -Method POST -Path "/test/all"

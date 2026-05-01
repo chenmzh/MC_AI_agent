@@ -158,7 +158,7 @@ public final class DevTestHttpServer {
             return new JsonResponse(200, onServer(uri, server -> runAction(server, uri, action)));
         }
 
-        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
+        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
         return new JsonResponse(404, notFound);
     }
 
@@ -188,6 +188,15 @@ public final class DevTestHttpServer {
         endpoints.add("POST /action/collect_items?player=<name>&radius=16");
         endpoints.add("POST /action/harvest_logs?player=<name>&radius=16&seconds=90");
         endpoints.add("POST /action/gather_stone?player=<name>&radius=16&count=3");
+        endpoints.add("POST /action/survival_assist?player=<name>");
+        endpoints.add("POST /action/till_field?player=<name>&radius=8");
+        endpoints.add("POST /action/plant_crop?player=<name>&crop=wheat&radius=8");
+        endpoints.add("POST /action/harvest_crops?player=<name>&radius=12");
+        endpoints.add("POST /action/hunt_food_animal?player=<name>&animal=cow&radius=16");
+        endpoints.add("POST /action/feed_animal?player=<name>&animal=cow&radius=16");
+        endpoints.add("POST /action/breed_animals?player=<name>&animal=cow&radius=16");
+        endpoints.add("POST /action/tame_animal?player=<name>&animal=wolf&radius=16");
+        endpoints.add("POST /action/build_redstone_template?player=<name>&template=pressure_door");
         endpoints.add("POST /action/build_basic_house?player=<name>");
         endpoints.add("POST /action/build_large_house?player=<name>");
         endpoints.add("POST /action/repair_structure?player=<name>&radius=12");
@@ -268,6 +277,7 @@ public final class DevTestHttpServer {
         json.add("planFeedback", PlanManager.feedbackFor(player));
         json.add("taskFeedback", TaskFeedback.snapshotJson(player, npc));
         json.add("resources", ResourceAssessment.snapshotFor(player));
+        json.add("survivalEnvironment", context.has("survivalEnvironment") ? context.get("survivalEnvironment") : SurvivalEnvironment.snapshotFor(player));
         json.add("capabilities", capabilities);
         json.add("taskControllerCatalog", taskControllerCatalog);
         json.add("worldKnowledge", context.has("worldKnowledge") ? context.get("worldKnowledge") : new JsonObject());
@@ -296,6 +306,7 @@ public final class DevTestHttpServer {
         json.addProperty("selectedPlayer", player.getGameProfile().getName());
         json.add("social", context.has("social") ? context.get("social") : new JsonObject());
         json.add("companion", context.has("companion") ? context.get("companion") : new JsonObject());
+        json.add("survivalEnvironment", context.has("survivalEnvironment") ? context.get("survivalEnvironment") : SurvivalEnvironment.snapshotFor(player));
         json.add("observationFrame", context.has("observationFrame") ? context.get("observationFrame") : new JsonObject());
         return json;
     }
@@ -414,6 +425,12 @@ public final class DevTestHttpServer {
         requireBooleanCapability(capabilities, "companionLoop", true, failures);
         requireBooleanCapability(capabilities, "proactiveCompanionTriggers", true, failures);
         requireBooleanCapability(capabilities, "boundedAutonomousResourceSearch", true, failures);
+        requireBooleanCapability(capabilities, "survivalEnvironment", true, failures);
+        requireBooleanCapability(capabilities, "highAutonomySafetyPolicy", true, failures);
+        requireBooleanCapability(capabilities, "farmingActions", true, failures);
+        requireBooleanCapability(capabilities, "animalCareActions", true, failures);
+        requireBooleanCapability(capabilities, "safeHuntingActions", true, failures);
+        requireBooleanCapability(capabilities, "redstoneTemplateActions", true, failures);
         requireBooleanCapability(capabilities, "parallelNpcWork", false, failures);
         requireBooleanCapability(capabilities, "taskControllerRuntime", false, failures);
         requireBooleanCapability(capabilities, "collectItemsControllerRuntime", true, failures);
@@ -430,6 +447,10 @@ public final class DevTestHttpServer {
         requireTaskControllerPlannerContract(taskControllerCatalog, "build_basic_house", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "repair_structure", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "craft_at_table", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "survival_assist", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "till_field", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "harvest_crops", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "build_redstone_template", failures);
         JsonObject worldKnowledge = context.has("worldKnowledge") && context.get("worldKnowledge").isJsonObject()
                 ? context.getAsJsonObject("worldKnowledge")
                 : new JsonObject();
@@ -441,6 +462,7 @@ public final class DevTestHttpServer {
         requireObject(context, "context", "relationship", failures);
         requireObject(context, "context", "companion", failures);
         requireObject(context, "context", "companionLoop", failures);
+        requireObject(context, "context", "survivalEnvironment", failures);
         requireObject(context, "context", "skillRegistry", failures);
         requireJsonArray(context, "context", "actionPrimitives", failures);
         requireObject(context, "context", "agentLoop", failures);
@@ -501,6 +523,7 @@ public final class DevTestHttpServer {
                 ? observation.getAsJsonObject("perception")
                 : new JsonObject();
         requireObject(perception, "observationFrame.perception", "objects", failures);
+        requireObject(perception, "observationFrame.perception", "survivalEnvironment", failures);
         JsonObject objects = perception.has("objects") && perception.get("objects").isJsonObject()
                 ? perception.getAsJsonObject("objects")
                 : new JsonObject();
@@ -519,6 +542,15 @@ public final class DevTestHttpServer {
         requireJsonArray(skills, "skillRegistry", "skills", failures);
         requirePrimitive(primitives, "prepare_basic_tools", failures);
         requirePrimitive(primitives, "report_resources", failures);
+        requirePrimitive(primitives, "survival_assist", failures);
+        requirePrimitive(primitives, "till_field", failures);
+        requirePrimitive(primitives, "plant_crop", failures);
+        requirePrimitive(primitives, "harvest_crops", failures);
+        requirePrimitive(primitives, "hunt_food_animal", failures);
+        requirePrimitive(primitives, "feed_animal", failures);
+        requirePrimitive(primitives, "breed_animals", failures);
+        requirePrimitive(primitives, "tame_animal", failures);
+        requirePrimitive(primitives, "build_redstone_template", failures);
         requirePrimitive(primitives, "break_block", failures);
         requirePrimitive(primitives, "place_block", failures);
         requirePrimitive(primitives, "gather_stone", failures);
@@ -593,6 +625,57 @@ public final class DevTestHttpServer {
                 json.addProperty("radius", radius);
                 json.addProperty("count", count);
                 json.addProperty("note", "Started stone gathering. Poll /state until npc.task returns to idle, then run collect_items before crafting stone tools.");
+            }
+            case "survival_assist" -> addActionResult(json, SurvivalActions.survivalAssist(player));
+            case "till_field" -> {
+                int radius = intQueryParam(uri, "radius", 8, 4, 24);
+                addActionResult(json, SurvivalActions.tillField(player, radius));
+                json.addProperty("radius", radius);
+            }
+            case "plant_crop" -> {
+                int radius = intQueryParam(uri, "radius", 8, 4, 24);
+                String crop = firstNonBlank(firstNonBlank(queryParam(uri, "crop"), queryParam(uri, "item")), "wheat");
+                addActionResult(json, SurvivalActions.plantCrop(player, crop, radius));
+                json.addProperty("radius", radius);
+                json.addProperty("crop", crop);
+            }
+            case "harvest_crops" -> {
+                int radius = intQueryParam(uri, "radius", 12, 4, 24);
+                addActionResult(json, SurvivalActions.harvestCrops(player, radius));
+                json.addProperty("radius", radius);
+            }
+            case "hunt_food_animal" -> {
+                int radius = intQueryParam(uri, "radius", 16, 4, 24);
+                String animal = firstNonBlank(queryParam(uri, "animal"), "animal");
+                addActionResult(json, SurvivalActions.huntFoodAnimal(player, animal, radius));
+                json.addProperty("radius", radius);
+                json.addProperty("animal", animal);
+            }
+            case "feed_animal" -> {
+                int radius = intQueryParam(uri, "radius", 16, 4, 24);
+                String animal = firstNonBlank(queryParam(uri, "animal"), "animal");
+                addActionResult(json, SurvivalActions.feedAnimal(player, animal, radius));
+                json.addProperty("radius", radius);
+                json.addProperty("animal", animal);
+            }
+            case "breed_animals" -> {
+                int radius = intQueryParam(uri, "radius", 16, 4, 24);
+                String animal = firstNonBlank(queryParam(uri, "animal"), "animal");
+                addActionResult(json, SurvivalActions.breedAnimals(player, animal, radius));
+                json.addProperty("radius", radius);
+                json.addProperty("animal", animal);
+            }
+            case "tame_animal" -> {
+                int radius = intQueryParam(uri, "radius", 16, 4, 24);
+                String animal = firstNonBlank(queryParam(uri, "animal"), "animal");
+                addActionResult(json, SurvivalActions.tameAnimal(player, animal, radius));
+                json.addProperty("radius", radius);
+                json.addProperty("animal", animal);
+            }
+            case "build_redstone_template" -> {
+                String template = firstNonBlank(queryParam(uri, "template"), "pressure_door");
+                addActionResult(json, SurvivalActions.buildRedstoneTemplate(player, template));
+                json.addProperty("template", template);
             }
             case "build_basic_house" -> {
                 NpcManager.buildBasicHouse(player);
@@ -724,12 +807,22 @@ public final class DevTestHttpServer {
             default -> {
                 json.addProperty("ok", false);
                 json.addProperty("error", "UNSUPPORTED_ACTION");
-                json.addProperty("message", "Allowed actions: collect_items, harvest_logs, gather_stone, build_basic_house, build_large_house, start_plan, taskgraph_next, continue_plan, report_plan, cancel_plan, inspect_block, break_block, place_block, craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, approve_chest_materials, revoke_chest_materials, equip_best_gear, stop, stop_guard, come, follow.");
+                json.addProperty("message", "Allowed actions: collect_items, harvest_logs, gather_stone, survival_assist, till_field, plant_crop, harvest_crops, hunt_food_animal, feed_animal, breed_animals, tame_animal, build_redstone_template, build_basic_house, build_large_house, start_plan, taskgraph_next, continue_plan, report_plan, cancel_plan, inspect_block, break_block, place_block, craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, approve_chest_materials, revoke_chest_materials, equip_best_gear, stop, stop_guard, come, follow.");
             }
         }
 
         json.add("npc", NpcManager.describeFor(player));
         return json;
+    }
+
+    private static void addActionResult(JsonObject json, ActionResult result) {
+        json.add("actionResult", result.toJson());
+        json.addProperty("started", result.isStarted());
+        json.addProperty("success", result.isSuccess());
+        json.addProperty("blocked", result.isBlocked());
+        if (result.isBlocked() || result.isFailed()) {
+            json.addProperty("ok", false);
+        }
     }
 
     private JsonObject onServer(URI uri, Function<MinecraftServer, JsonObject> action) {

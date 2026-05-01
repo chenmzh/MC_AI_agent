@@ -144,6 +144,114 @@ public final class TaskControllerRegistry {
                 targetScopePolicy(true, true, false, true, "nearby_container_or_explicit_container"),
                 List.of("items_moved")
         ));
+        register(controllers, metadata(
+                "survival_assist",
+                false,
+                true,
+                "Chooses the first survival-priority action from environment observation: guard, harvest crops, gather logs, or report blockers.",
+                List.of("active_npc", "owner_online_same_dimension", "survival_environment_snapshot"),
+                List.of("npc_inventory", "nearby_threats", "nearby_resources"),
+                List.of("npc_runtime", "npc_navigation", "npc_inventory", "survival_environment"),
+                List.of("high_autonomy_safe_policy", "world_changes_only_through_whitelisted_actions", "does_not_use_player_inventory"),
+                targetScopePolicy(true, true, false, true, "owner_radius"),
+                List.of("priority_survival_action_started_or_reported")
+        ));
+        register(controllers, metadata(
+                "till_field",
+                false,
+                true,
+                "Tills a bounded starter field near water using a hoe from NPC storage.",
+                List.of("active_npc", "owner_online_same_dimension", "hoe_in_npc_storage", "nearby_tillable_soil", "nearby_water"),
+                List.of("hoe_durability", "tillable_soil"),
+                List.of("npc_runtime", "npc_inventory", "nearby_field_blocks"),
+                List.of("requires_player_command_or_saved_plan_permission", "bounded_rectangle", "does_not_use_player_inventory"),
+                targetScopePolicy(true, true, false, true, "owner_radius_near_water"),
+                List.of("farmland_blocks_created")
+        ));
+        register(controllers, metadata(
+                "plant_crop",
+                false,
+                true,
+                "Plants common crops on nearby empty farmland from NPC storage.",
+                List.of("active_npc", "owner_online_same_dimension", "seed_or_crop_item_in_npc_storage", "empty_farmland_nearby"),
+                List.of("seeds_or_crop_items"),
+                List.of("npc_runtime", "npc_inventory", "nearby_farmland"),
+                List.of("uses_only_npc_storage", "bounded_radius"),
+                targetScopePolicy(true, true, false, true, "owner_radius_field"),
+                List.of("crop_blocks_planted", "seeds_consumed")
+        ));
+        register(controllers, metadata(
+                "harvest_crops",
+                true,
+                true,
+                "Harvests mature nearby crops only, then starts dropped-item collection.",
+                List.of("active_npc", "owner_online_same_dimension", "mature_crops_nearby"),
+                List.of("npc_storage_free_slot_or_container_space"),
+                List.of("npc_runtime", "npc_navigation", "nearby_crops", "collect_items"),
+                List.of("mature_crops_only", "bounded_radius", "safe_autonomous_action"),
+                targetScopePolicy(true, true, true, false, "owner_radius"),
+                List.of("crop_drops", "seeds", "collect_items_started")
+        ));
+        register(controllers, metadata(
+                "hunt_food_animal",
+                false,
+                true,
+                "Attacks one adult unprotected food animal while avoiding named, baby, leashed, tameable, or fenced animals.",
+                List.of("active_npc", "owner_online_same_dimension", "adult_wild_food_animal_nearby", "player_permission_or_saved_plan_permission"),
+                List.of("weapon_or_hand", "npc_health"),
+                List.of("npc_runtime", "npc_navigation", "nearby_animals"),
+                List.of("never_attacks_players_villagers_pets_named_babies_or_fenced_animals", "bounded_radius"),
+                targetScopePolicy(true, true, false, true, "owner_radius"),
+                List.of("food_animal_attacked", "drops_available_for_collect_items")
+        ));
+        register(controllers, metadata(
+                "feed_animal",
+                false,
+                true,
+                "Feeds a nearby matching animal with accepted food from NPC storage.",
+                List.of("active_npc", "owner_online_same_dimension", "matching_animal_nearby", "accepted_food_in_npc_storage"),
+                List.of("animal_food_items"),
+                List.of("npc_runtime", "npc_inventory", "nearby_animals"),
+                List.of("uses_only_npc_storage", "bounded_radius"),
+                targetScopePolicy(true, true, false, true, "owner_radius"),
+                List.of("animal_fed", "food_consumed")
+        ));
+        register(controllers, metadata(
+                "breed_animals",
+                false,
+                true,
+                "Feeds two adult unprotected matching animals for breeding using NPC storage feed.",
+                List.of("active_npc", "owner_online_same_dimension", "two_adult_unprotected_matching_animals", "two_matching_food_items_in_npc_storage"),
+                List.of("animal_food_items"),
+                List.of("npc_runtime", "npc_inventory", "nearby_animals"),
+                List.of("avoids_babies_named_leashed_tameable_or_fenced_animals", "uses_only_npc_storage"),
+                targetScopePolicy(true, true, false, true, "owner_radius"),
+                List.of("two_animals_fed_for_breeding", "food_consumed")
+        ));
+        register(controllers, metadata(
+                "tame_animal",
+                false,
+                true,
+                "Tames supported nearby animals from NPC storage items; v1 supports wolves and cats.",
+                List.of("active_npc", "owner_online_same_dimension", "supported_tameable_nearby", "taming_item_in_npc_storage"),
+                List.of("bones_or_fish"),
+                List.of("npc_runtime", "npc_inventory", "nearby_animals"),
+                List.of("requires_player_command_or_saved_plan_permission", "uses_only_npc_storage"),
+                targetScopePolicy(true, true, false, true, "owner_radius"),
+                List.of("animal_tamed_or_already_tame_reported", "taming_item_consumed")
+        ));
+        register(controllers, metadata(
+                "build_redstone_template",
+                false,
+                true,
+                "Builds a verified redstone template; first version supports a pressure-door template only.",
+                List.of("active_npc", "owner_online_same_dimension", "door_in_npc_storage", "two_pressure_plates_in_npc_storage", "clear_flat_target_space"),
+                List.of("door", "pressure_plates"),
+                List.of("npc_runtime", "npc_inventory", "build_volume"),
+                List.of("requires_player_command_or_saved_plan_permission", "template_only", "does_not_modify_unknown_redstone"),
+                targetScopePolicy(true, true, false, true, "player_facing_clear_flat_anchor"),
+                List.of("pressure_door_template_built", "materials_consumed")
+        ));
         return Collections.unmodifiableMap(controllers);
     }
 

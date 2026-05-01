@@ -22,7 +22,8 @@ public final class ActionPrimitiveRegistry {
 
         try {
             ActionResult result = switch (name) {
-                case "observe_environment", "report_nearby", "scan_nearby", "scan_hostiles" -> {
+                case "observe_environment" -> SurvivalActions.reportEnvironment(player);
+                case "report_nearby", "scan_nearby", "scan_hostiles" -> {
                     BridgeActions.reportNearby(player, radius(args));
                     yield ActionResult.success("DONE", "Reported nearby entities from the current observation.");
                 }
@@ -44,6 +45,24 @@ public final class ActionPrimitiveRegistry {
                     yield ActionResult.success("DONE", "Reported NPC storage, approved container resources, and blueprint material gaps.")
                             .withObservation("resources", ResourceAssessment.snapshotFor(player));
                 }
+                case "survival_assist", "help_me_survive" -> withNpc(player, "survival_assist", () ->
+                        SurvivalActions.survivalAssist(player));
+                case "till_field", "prepare_field" -> withNpc(player, "till_field", () ->
+                        SurvivalActions.tillField(player, radius(args)));
+                case "plant_crop", "plant_crops" -> withNpc(player, "plant_crop", () ->
+                        SurvivalActions.plantCrop(player, firstString(args, "crop", "item", "seed", "targetCrop"), radius(args)));
+                case "harvest_crops" -> withNpc(player, "harvest_crops", () ->
+                        SurvivalActions.harvestCrops(player, radius(args)));
+                case "hunt_food_animal", "hunt_animal" -> withNpc(player, "hunt_food_animal", () ->
+                        SurvivalActions.huntFoodAnimal(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
+                case "feed_animal" -> withNpc(player, "feed_animal", () ->
+                        SurvivalActions.feedAnimal(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
+                case "breed_animals", "breed_animal" -> withNpc(player, "breed_animals", () ->
+                        SurvivalActions.breedAnimals(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
+                case "tame_animal" -> withNpc(player, "tame_animal", () ->
+                        SurvivalActions.tameAnimal(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
+                case "build_redstone_template", "redstone_template" -> withNpc(player, "build_redstone_template", () ->
+                        SurvivalActions.buildRedstoneTemplate(player, firstString(args, "template", "name", "structure")));
                 case "move_to", "goto_position" -> moveTo(player, args);
                 case "come_to_player", "come" -> withNpc(player, "come_to_player", () -> {
                     NpcManager.comeTo(player);

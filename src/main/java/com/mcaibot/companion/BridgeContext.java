@@ -132,6 +132,7 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         context.add("crafting", craftingSummary(player));
         context.add("resources", ResourceAssessment.snapshotFor(player));
         context.add("blueprints", ResourceAssessment.blueprintsFor(player));
+        context.add("survivalEnvironment", SurvivalEnvironment.snapshotFor(player));
         context.add("modded", ModInteractionManager.snapshotFor(player));
         JsonObject executionFeedback = TaskFeedback.snapshotJson(player, npcJson);
         context.add("executionFeedback", executionFeedback);
@@ -205,6 +206,12 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         capabilities.addProperty("companionLoop", true);
         capabilities.addProperty("proactiveCompanionTriggers", true);
         capabilities.addProperty("boundedAutonomousResourceSearch", true);
+        capabilities.addProperty("survivalEnvironment", true);
+        capabilities.addProperty("highAutonomySafetyPolicy", true);
+        capabilities.addProperty("farmingActions", true);
+        capabilities.addProperty("animalCareActions", true);
+        capabilities.addProperty("safeHuntingActions", true);
+        capabilities.addProperty("redstoneTemplateActions", true);
         capabilities.addProperty("taskControllerRuntime", false);
         capabilities.addProperty("collectItemsControllerRuntime", true);
         capabilities.add("taskControllerCatalog", TaskControllerRegistry.catalogJson());

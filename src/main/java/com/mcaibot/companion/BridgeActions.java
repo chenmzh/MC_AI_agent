@@ -85,6 +85,26 @@ public final class BridgeActions {
             case "approve_chest_materials", "allow_chest_materials", "approve_container_materials" -> NpcManager.approveChestMaterials(player);
             case "revoke_chest_materials", "deny_chest_materials", "disallow_chest_materials" -> NpcManager.revokeChestMaterials(player);
             case "report_resources", "assess_resources" -> ResourceAssessment.report(player);
+            case "observe_environment", "survival_report", "report_environment" ->
+                    emitActionResult(player, "observe_environment", SurvivalActions.reportEnvironment(player), false);
+            case "survival_assist", "help_me_survive" ->
+                    emitActionResult(player, "survival_assist", SurvivalActions.survivalAssist(player), true);
+            case "till_field", "prepare_field" ->
+                    emitActionResult(player, "till_field", SurvivalActions.tillField(player, actionRadius(decision)), false);
+            case "plant_crop", "plant_crops" ->
+                    emitActionResult(player, "plant_crop", SurvivalActions.plantCrop(player, firstNonBlank(action.item(), action.value(), action.block()), actionRadius(decision)), false);
+            case "harvest_crops" ->
+                    emitActionResult(player, "harvest_crops", SurvivalActions.harvestCrops(player, actionRadius(decision)), false);
+            case "hunt_food_animal", "hunt_animal" ->
+                    emitActionResult(player, "hunt_food_animal", SurvivalActions.huntFoodAnimal(player, firstNonBlank(action.value(), action.item()), actionRadius(decision)), false);
+            case "feed_animal" ->
+                    emitActionResult(player, "feed_animal", SurvivalActions.feedAnimal(player, firstNonBlank(action.value(), action.item()), actionRadius(decision)), false);
+            case "breed_animals", "breed_animal" ->
+                    emitActionResult(player, "breed_animals", SurvivalActions.breedAnimals(player, firstNonBlank(action.value(), action.item()), actionRadius(decision)), false);
+            case "tame_animal" ->
+                    emitActionResult(player, "tame_animal", SurvivalActions.tameAnimal(player, firstNonBlank(action.value(), action.item()), actionRadius(decision)), false);
+            case "build_redstone_template", "redstone_template" ->
+                    emitActionResult(player, "build_redstone_template", SurvivalActions.buildRedstoneTemplate(player, firstNonBlank(action.value(), action.block(), action.item())), false);
             case "inspect_block" -> {
                 BridgeDecision.Position position = decision.action().position();
                 if (position == null) {
@@ -790,6 +810,13 @@ public final class BridgeActions {
 
     private static void say(ServerPlayer player, String message) {
         NpcChat.say(player, message);
+    }
+
+    private static void emitActionResult(ServerPlayer player, String taskName, ActionResult result, boolean saySuccess) {
+        TaskFeedback.recordActionResult(player, NpcManager.activeNpcMob(player.getServer()), taskName, result);
+        if (result.isBlocked() || result.isFailed() || saySuccess) {
+            say(player, firstNonBlank(result.message(), result.code(), result.status()));
+        }
     }
 
     private static String firstNonBlank(String... values) {
