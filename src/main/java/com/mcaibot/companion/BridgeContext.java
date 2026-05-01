@@ -132,6 +132,8 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         context.add("crafting", craftingSummary(player));
         context.add("resources", ResourceAssessment.snapshotFor(player));
         context.add("blueprints", ResourceAssessment.blueprintsFor(player));
+        context.add("structureBlueprints", BlueprintTemplateRegistry.catalogJson());
+        context.add("travelPolicy", TravelController.policyJson());
         context.add("survivalEnvironment", SurvivalEnvironment.snapshotFor(player));
         context.add("modded", ModInteractionManager.snapshotFor(player));
         JsonObject executionFeedback = TaskFeedback.snapshotJson(player, npcJson);
@@ -212,6 +214,12 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         capabilities.addProperty("animalCareActions", true);
         capabilities.addProperty("safeHuntingActions", true);
         capabilities.addProperty("redstoneTemplateActions", true);
+        capabilities.addProperty("materialGatheringAction", true);
+        capabilities.addProperty("structureBlueprintTemplates", true);
+        capabilities.addProperty("structurePreviewAction", true);
+        capabilities.addProperty("structureBuildAction", true);
+        capabilities.addProperty("travelController", true);
+        capabilities.addProperty("litematicaBlueprintProvider", false);
         capabilities.addProperty("taskControllerRuntime", false);
         capabilities.addProperty("collectItemsControllerRuntime", true);
         capabilities.add("taskControllerCatalog", TaskControllerRegistry.catalogJson());

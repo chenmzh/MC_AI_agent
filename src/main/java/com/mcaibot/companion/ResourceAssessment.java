@@ -146,6 +146,7 @@ public final class ResourceAssessment {
         largeHouse.addProperty("phases", "build_large_house -> bounded gather_logs/craft_planks loops when material is short -> resume same blueprint");
         largeHouse.addProperty("checkpointPolicy", "world-state checkpoint: placed blocks are skipped when rebuilding the queue");
         root.add("large_7x7_house", largeHouse);
+        root.add("structureTemplates", BlueprintTemplateRegistry.catalogJson());
         return root;
     }
 

@@ -85,6 +85,54 @@ public final class TaskControllerRegistry {
                 List.of("items_in_npc_storage_or_nearby_container_or_owner_inventory")
         ));
         register(controllers, metadata(
+                "gather_materials",
+                false,
+                true,
+                "Acquires requested build materials through source priority: NPC storage, approved containers, known resource hints, then bounded same-dimension scouting.",
+                List.of("active_npc", "owner_online_same_dimension", "material_category", "bounded_count"),
+                List.of("npc_storage_materials", "approved_container_materials", "known_resource_hints", "bounded_scout_budget"),
+                List.of("npc_runtime", "npc_navigation", "npc_inventory", "world_knowledge_resource_hints"),
+                List.of("does_not_use_player_inventory", "container_materials_require_approval", "same_dimension_only", "bounded_time_and_distance"),
+                targetScopePolicy(true, true, false, true, "owner_radius_or_known_resource_hint"),
+                List.of("material_count_ready", "collect_items_may_start", "blocker_reports_missing_source")
+        ));
+        register(controllers, metadata(
+                "preview_structure",
+                true,
+                false,
+                "Previews a deterministic blueprint template, site blockers, and material budget without modifying the world.",
+                List.of("template_or_structure_intent", "owner_online_same_dimension"),
+                List.of("blueprint_catalog", "resources", "build_anchor"),
+                List.of("blueprint_registry", "resource_assessment", "site_scan"),
+                List.of("no_world_change", "does_not_use_player_inventory"),
+                targetScopePolicy(true, true, false, true, "player_relative_or_explicit_build_anchor"),
+                List.of("blueprint_preview", "site_check", "material_plan")
+        ));
+        register(controllers, metadata(
+                "build_structure",
+                false,
+                true,
+                "Builds a deterministic blueprint template with safe site checks, role-based block candidates, optional decoration skipping, and material-gather recovery.",
+                List.of("active_npc", "owner_online_same_dimension", "approved_template", "safe_build_volume", "materials_or_auto_gather"),
+                List.of("npc_storage_materials", "approved_container_materials", "placeable_blocks", "blueprint_template"),
+                List.of("npc_runtime", "npc_inventory", "build_volume", "nearby_containers"),
+                List.of("does_not_use_player_inventory", "container_materials_require_approval", "will_not_clear_base_core_blocks", "template_only"),
+                targetScopePolicy(true, true, false, true, "player_relative_or_explicit_build_anchor"),
+                List.of("blueprint_blocks_placed", "optional_decorations_skipped_if_missing", "may_trigger_gather_materials")
+        ));
+        register(controllers, metadata(
+                "cancel_structure",
+                true,
+                false,
+                "Stops an active structure/build-related runtime task.",
+                List.of("active_npc"),
+                List.of("npc_runtime"),
+                List.of("npc_runtime"),
+                List.of("safe_stop"),
+                targetScopePolicy(true, true, false, false, "active_npc"),
+                List.of("active_task_stopped_or_idle")
+        ));
+        register(controllers, metadata(
                 "build_basic_house",
                 false,
                 true,

@@ -48,6 +48,8 @@ public final class ObservationFrame {
         resources.add("tools", copy(context, "tools"));
         resources.add("crafting", copy(context, "crafting"));
         resources.add("blueprints", copy(context, "blueprints"));
+        resources.add("structureBlueprints", copy(context, "structureBlueprints"));
+        resources.add("travelPolicy", copy(context, "travelPolicy"));
         frame.add("resources", resources);
 
         JsonObject feedback = new JsonObject();

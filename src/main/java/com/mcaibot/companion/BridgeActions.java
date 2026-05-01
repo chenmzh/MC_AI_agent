@@ -2,6 +2,7 @@ package com.mcaibot.companion;
 
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -105,6 +106,25 @@ public final class BridgeActions {
                     emitActionResult(player, "tame_animal", SurvivalActions.tameAnimal(player, firstNonBlank(action.value(), action.item()), actionRadius(decision)), false);
             case "build_redstone_template", "redstone_template" ->
                     emitActionResult(player, "build_redstone_template", SurvivalActions.buildRedstoneTemplate(player, firstNonBlank(action.value(), action.block(), action.item())), false);
+            case "gather_materials" ->
+                    emitActionResult(player, "gather_materials", MaterialGatherer.gatherMaterials(player,
+                            firstNonBlank(action.item(), action.block(), action.value(), action.message(), "placeable_blocks"),
+                            actionCount(decision, 64)), false);
+            case "preview_structure" ->
+                    emitActionResult(player, "preview_structure", StructureBuildController.previewStructure(player,
+                            templateFromAction(action),
+                            action.position() == null ? null : blockPos(action.position()),
+                            buildFacing(player, action),
+                            firstNonBlank(action.style(), action.behaviorPreference(), "")), false);
+            case "build_structure" ->
+                    emitActionResult(player, "build_structure", StructureBuildController.buildStructure(player,
+                            templateFromAction(action),
+                            action.position() == null ? null : blockPos(action.position()),
+                            buildFacing(player, action),
+                            firstNonBlank(action.style(), action.behaviorPreference(), ""),
+                            true), false);
+            case "cancel_structure" ->
+                    emitActionResult(player, "cancel_structure", StructureBuildController.cancelStructure(player), false);
             case "inspect_block" -> {
                 BridgeDecision.Position position = decision.action().position();
                 if (position == null) {
@@ -184,8 +204,18 @@ public final class BridgeActions {
                 }
             }
             case "prepare_build_materials", "gather_wood", "collect_drops", "build_basic_shelter", "create_inspect" -> PlanManager.startPlan(player, decision, true);
-            case "build_basic_house" -> NpcManager.buildBasicHouse(player);
-            case "build_large_house" -> NpcManager.buildLargeHouse(player);
+            case "build_basic_house" -> emitActionResult(player, "build_basic_house", StructureBuildController.buildStructure(player,
+                    "starter_cabin_7x7",
+                    action.position() == null ? null : blockPos(action.position()),
+                    buildFacing(player, action),
+                    firstNonBlank(action.style(), action.behaviorPreference(), ""),
+                    false), false);
+            case "build_large_house" -> emitActionResult(player, "build_large_house", StructureBuildController.buildStructure(player,
+                    "starter_cabin_7x7",
+                    action.position() == null ? null : blockPos(action.position()),
+                    buildFacing(player, action),
+                    firstNonBlank(action.style(), action.behaviorPreference(), ""),
+                    true), false);
             case "goto_position" -> {
                 BridgeDecision.Position position = decision.action().position();
                 if (position == null) {
@@ -356,6 +386,10 @@ public final class BridgeActions {
                 || normalized.equals("craft_with_workbench")
                 || normalized.equals("craft_from_chest_at_table")
                 || normalized.equals("craft_chest_item_at_table")
+                || normalized.equals("gather_materials")
+                || normalized.equals("preview_structure")
+                || normalized.equals("build_structure")
+                || normalized.equals("cancel_structure")
                 || normalized.equals("build_basic_house")
                 || normalized.equals("build_large_house")
                 || normalized.equals("deposit_to_chest")
@@ -471,6 +505,22 @@ public final class BridgeActions {
 
     private static BlockPos blockPos(BridgeDecision.Position position) {
         return BlockPos.containing(position.x(), position.y(), position.z());
+    }
+
+    private static Direction buildFacing(ServerPlayer player, BridgeDecision.Action action) {
+        String explicit = firstNonBlank(action.block(), "");
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            if (direction.getName().equals(normalizeKey(explicit))) {
+                return direction;
+            }
+        }
+        return player.getDirection().getAxis().isVertical() ? Direction.NORTH : player.getDirection();
+    }
+
+    private static String templateFromAction(BridgeDecision.Action action) {
+        String explicit = firstNonBlank(action.block(), action.item(), action.value(), action.key(), "");
+        String inferred = BlueprintTemplateRegistry.inferTemplate(firstNonBlank(explicit, action.message(), ""));
+        return explicit.isBlank() ? inferred : BlueprintTemplateRegistry.normalizeTemplate(inferred.isBlank() ? explicit : inferred);
     }
 
     private static void remember(ServerPlayer player, BridgeDecision decision, NpcProfileStore profileStore) {

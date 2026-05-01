@@ -63,6 +63,25 @@ public final class ActionPrimitiveRegistry {
                         SurvivalActions.tameAnimal(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
                 case "build_redstone_template", "redstone_template" -> withNpc(player, "build_redstone_template", () ->
                         SurvivalActions.buildRedstoneTemplate(player, firstString(args, "template", "name", "structure")));
+                case "gather_materials" -> withNpc(player, "gather_materials", () ->
+                        MaterialGatherer.gatherMaterials(player,
+                                firstString(args, "material", "category", "target", "item", "block"),
+                                count(args, 64)));
+                case "preview_structure" -> withNpc(player, "preview_structure", () ->
+                        StructureBuildController.previewStructure(player,
+                                firstString(args, "template", "templateId", "structure", "blueprint"),
+                                blockPos(args),
+                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
+                                firstString(args, "style", "palette", "materialPreference")));
+                case "build_structure" -> withNpc(player, "build_structure", () ->
+                        StructureBuildController.buildStructure(player,
+                                firstString(args, "template", "templateId", "structure", "blueprint"),
+                                blockPos(args),
+                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
+                                firstString(args, "style", "palette", "materialPreference"),
+                                boolArg(args, "autoGather", true)));
+                case "cancel_structure" -> withNpc(player, "cancel_structure", () ->
+                        StructureBuildController.cancelStructure(player));
                 case "move_to", "goto_position" -> moveTo(player, args);
                 case "come_to_player", "come" -> withNpc(player, "come_to_player", () -> {
                     NpcManager.comeTo(player);
@@ -164,22 +183,18 @@ public final class ActionPrimitiveRegistry {
                 });
                 case "build_basic_house", "build_basic_shelter" -> withNpc(player, "build_basic_house", () -> {
                     BlockPos pos = blockPos(args);
-                    if (pos == null) {
-                        NpcManager.buildBasicHouse(player);
-                    } else {
-                        NpcManager.buildBasicHouse(player, pos, directionFromName(firstString(args, "forward", "direction", "facing")));
-                    }
-                    return ActionResult.started("STARTED", "NPC started building the basic shelter blueprint.")
+                    return StructureBuildController.buildStructure(player, "starter_cabin_7x7", pos,
+                                    directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
+                                    firstString(args, "style", "palette", "materialPreference"),
+                                    false)
                             .withEffect("taskName", "build_basic_house");
                 });
                 case "build_large_house", "large_house" -> withNpc(player, "build_large_house", () -> {
                     BlockPos pos = blockPos(args);
-                    if (pos == null) {
-                        NpcManager.buildLargeHouse(player);
-                    } else {
-                        NpcManager.buildLargeHouse(player, pos, directionFromName(firstString(args, "forward", "direction", "facing")));
-                    }
-                    return ActionResult.started("STARTED", "NPC started building the large house blueprint.")
+                    return StructureBuildController.buildStructure(player, "starter_cabin_7x7", pos,
+                                    directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
+                                    firstString(args, "style", "palette", "materialPreference"),
+                                    true)
                             .withEffect("taskName", "build_large_house");
                 });
                 case "repair_structure", "repair_house", "repair_wall", "repair_door", "patch_house", "fix_house" -> withNpc(player, "repair_structure", () -> {

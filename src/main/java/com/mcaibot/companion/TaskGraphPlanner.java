@@ -201,7 +201,7 @@ public final class TaskGraphPlanner {
     private static String actionForStage(String stage) {
         return switch (stage) {
             case PlanSkillLibrary.PREPARE_BASIC_TOOLS -> "prepare_basic_tools";
-            case PlanSkillLibrary.PREPARE_BUILD_MATERIALS -> "report_resources";
+            case PlanSkillLibrary.PREPARE_BUILD_MATERIALS -> "gather_materials";
             case PlanSkillLibrary.GATHER_WOOD -> "harvest_logs";
             case PlanSkillLibrary.GATHER_STONE -> "gather_stone";
             case PlanSkillLibrary.MINE_RESOURCES -> "mine_nearby_ore";
@@ -212,8 +212,8 @@ public final class TaskGraphPlanner {
             case PlanSkillLibrary.CRAFT_STICKS -> "craft_item";
             case PlanSkillLibrary.CRAFT_STONE_AXE -> "craft_item";
             case PlanSkillLibrary.CRAFT_STONE_PICKAXE -> "craft_item";
-            case PlanSkillLibrary.BUILD_BASIC_SHELTER -> "build_basic_house";
-            case PlanSkillLibrary.BUILD_LARGE_HOUSE -> "build_large_house";
+            case PlanSkillLibrary.BUILD_BASIC_SHELTER -> "build_structure";
+            case PlanSkillLibrary.BUILD_LARGE_HOUSE -> "build_structure";
             case PlanSkillLibrary.REPAIR_STRUCTURE -> "repair_structure";
             case PlanSkillLibrary.EQUIP_GEAR -> "equip_best_gear";
             case PlanSkillLibrary.DEPOSIT_STORAGE -> "deposit_to_chest";
@@ -236,11 +236,18 @@ public final class TaskGraphPlanner {
         if (snapshot.hasTargetPosition()) {
             args.add("position", position(snapshot.targetX(), snapshot.targetY(), snapshot.targetZ()));
         }
-        if (normalized.equals("build_basic_house") || normalized.equals("build_basic_shelter")) {
+        if (normalized.equals("build_basic_house") || normalized.equals("build_basic_shelter") || normalized.equals("build_structure")) {
             if (snapshot.hasBuildAnchor()) {
                 args.add("position", position(snapshot.buildCenterX(), snapshot.buildCenterY(), snapshot.buildCenterZ()));
                 args.addProperty("forward", firstNonBlank(snapshot.buildForwardName(), "north"));
             }
+            args.addProperty("template", "starter_cabin_7x7");
+            args.addProperty("style", "rustic");
+            args.addProperty("autoGather", !snapshot.goal().equals(PlanSkillLibrary.BUILD_BASIC_SHELTER));
+        }
+        if (normalized.equals("gather_materials")) {
+            args.addProperty("material", snapshot.goal().equals(PlanSkillLibrary.GATHER_STONE) ? "stone" : "placeable_blocks");
+            args.addProperty("count", snapshot.goal().equals(PlanSkillLibrary.BUILD_LARGE_HOUSE) ? 184 : 94);
         }
         if (normalized.equals("prepare_basic_tools") || normalized.equals("prepare_axe") || normalized.equals("prepare_pickaxe")) {
             boolean needsAxe = snapshot.goal().equals(PlanSkillLibrary.GATHER_WOOD)
@@ -376,7 +383,7 @@ public final class TaskGraphPlanner {
 
     private static String safetyLevelForAction(String action) {
         String normalized = normalize(action);
-        if (normalized.equals("break_block") || normalized.equals("place_block") || normalized.equals("build_basic_house") || normalized.equals("build_basic_shelter") || normalized.equals("build_large_house") || normalized.equals("repair_structure")) {
+        if (normalized.equals("break_block") || normalized.equals("place_block") || normalized.equals("build_structure") || normalized.equals("build_basic_house") || normalized.equals("build_basic_shelter") || normalized.equals("build_large_house") || normalized.equals("repair_structure")) {
             return "destructive";
         }
         if (normalized.equals("withdraw_from_chest") || normalized.equals("deposit_to_chest") || normalized.equals("use_mod_wrench")) {

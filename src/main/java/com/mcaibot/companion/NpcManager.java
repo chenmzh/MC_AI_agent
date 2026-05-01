@@ -91,10 +91,10 @@ public final class NpcManager {
     private static final int PENDING_BUILD_HARVEST_SECONDS = 120;
     private static final int MAX_PENDING_REPAIR_GATHER_ATTEMPTS = 4;
     private static final int PENDING_REPAIR_HARVEST_SECONDS = 90;
-    private static final double KNOWN_RESOURCE_TRAVEL_MAX_DISTANCE = 96.0D;
+    private static final double KNOWN_RESOURCE_TRAVEL_MAX_DISTANCE = TravelController.KNOWN_RESOURCE_MAX_DISTANCE;
     private static final int KNOWN_RESOURCE_MAX_AGE_TICKS = 20 * 60 * 30;
-    private static final int KNOWN_RESOURCE_TRAVEL_TIMEOUT_TICKS = 20 * 45;
-    private static final int HARVEST_SCOUT_RADIUS = 28;
+    private static final int KNOWN_RESOURCE_TRAVEL_TIMEOUT_TICKS = 20 * 90;
+    private static final int HARVEST_SCOUT_RADIUS = TravelController.SCOUT_RING_MAX_RADIUS;
     private static final int HARVEST_SCOUT_LEG_TICKS = 20 * 5;
     private static final int NAVIGATION_STUCK_RETRY_TICKS = 80;
     private static final int NAVIGATION_BLOCKED_MEMORY_TICKS = 120;
@@ -662,7 +662,7 @@ public final class NpcManager {
     }
 
     public static void buildBasicHouse(ServerPlayer player, BlockPos center, Direction forward) {
-        buildHouse(player, BuildKind.BASIC, center, forward, false);
+        StructureBuildController.buildStructure(player, "starter_cabin_7x7", center, forward, "rustic", false);
     }
 
     public static void buildLargeHouse(ServerPlayer player) {
@@ -671,7 +671,7 @@ public final class NpcManager {
     }
 
     public static void buildLargeHouse(ServerPlayer player, BlockPos center, Direction forward) {
-        buildHouse(player, BuildKind.LARGE, center, forward, true);
+        StructureBuildController.buildStructure(player, "starter_cabin_7x7", center, forward, "rustic", true);
     }
 
     public static boolean repairNearbyStructure(ServerPlayer player) {

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -132,6 +133,9 @@ public final class DevTestHttpServer {
         if ("GET".equals(method) && "/skills".equals(path)) {
             return new JsonResponse(200, skills());
         }
+        if ("GET".equals(method) && "/blueprints".equals(path)) {
+            return new JsonResponse(200, blueprints());
+        }
         if ("POST".equals(method) && "/test/runtime".equals(path)) {
             return new JsonResponse(200, onServer(uri, server -> runtimeContextTest(server, uri)));
         }
@@ -158,7 +162,7 @@ public final class DevTestHttpServer {
             return new JsonResponse(200, onServer(uri, server -> runAction(server, uri, action)));
         }
 
-        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
+        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, GET /blueprints, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|gather_materials|preview_structure|build_structure|cancel_structure|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
         return new JsonResponse(404, notFound);
     }
 
@@ -178,6 +182,7 @@ public final class DevTestHttpServer {
         endpoints.add("GET /runtime?player=<name>");
         endpoints.add("GET /observation?player=<name>");
         endpoints.add("GET /skills");
+        endpoints.add("GET /blueprints");
         endpoints.add("POST /test/runtime?player=<name>");
         endpoints.add("POST /test/agent_contracts?player=<name>");
         endpoints.add("POST /test/taskgraph_next?player=<name>");
@@ -197,6 +202,10 @@ public final class DevTestHttpServer {
         endpoints.add("POST /action/breed_animals?player=<name>&animal=cow&radius=16");
         endpoints.add("POST /action/tame_animal?player=<name>&animal=wolf&radius=16");
         endpoints.add("POST /action/build_redstone_template?player=<name>&template=pressure_door");
+        endpoints.add("POST /action/gather_materials?player=<name>&material=logs|stone|sand|dirt|glass_like|placeable_blocks&count=64");
+        endpoints.add("POST /action/preview_structure?player=<name>&template=starter_cabin_7x7|storage_shed_5x7|bridge_3w|watchtower_5x5|farm_fence_9x9|path_lights");
+        endpoints.add("POST /action/build_structure?player=<name>&template=starter_cabin_7x7&autoGather=true");
+        endpoints.add("POST /action/cancel_structure?player=<name>");
         endpoints.add("POST /action/build_basic_house?player=<name>");
         endpoints.add("POST /action/build_large_house?player=<name>");
         endpoints.add("POST /action/repair_structure?player=<name>&radius=12");
@@ -319,6 +328,12 @@ public final class DevTestHttpServer {
         return json;
     }
 
+    private JsonObject blueprints() {
+        JsonObject json = baseOk("blueprints");
+        json.add("catalog", BlueprintTemplateRegistry.catalogJson());
+        return json;
+    }
+
     private JsonObject state(MinecraftServer server, URI uri) {
         JsonObject json = baseOk("state");
         json.addProperty("serverVersion", server.getServerVersion());
@@ -431,6 +446,12 @@ public final class DevTestHttpServer {
         requireBooleanCapability(capabilities, "animalCareActions", true, failures);
         requireBooleanCapability(capabilities, "safeHuntingActions", true, failures);
         requireBooleanCapability(capabilities, "redstoneTemplateActions", true, failures);
+        requireBooleanCapability(capabilities, "materialGatheringAction", true, failures);
+        requireBooleanCapability(capabilities, "structureBlueprintTemplates", true, failures);
+        requireBooleanCapability(capabilities, "structurePreviewAction", true, failures);
+        requireBooleanCapability(capabilities, "structureBuildAction", true, failures);
+        requireBooleanCapability(capabilities, "travelController", true, failures);
+        requireBooleanCapability(capabilities, "litematicaBlueprintProvider", false, failures);
         requireBooleanCapability(capabilities, "parallelNpcWork", false, failures);
         requireBooleanCapability(capabilities, "taskControllerRuntime", false, failures);
         requireBooleanCapability(capabilities, "collectItemsControllerRuntime", true, failures);
@@ -442,7 +463,13 @@ public final class DevTestHttpServer {
         requireTaskControllerParallelSafe(taskControllerCatalog, "build_basic_house", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "build_large_house", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "repair_structure", false, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "preview_structure", true, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "build_structure", false, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "gather_materials", false, failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "collect_items", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "gather_materials", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "preview_structure", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "build_structure", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "gather_stone", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "build_basic_house", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "repair_structure", failures);
@@ -463,6 +490,8 @@ public final class DevTestHttpServer {
         requireObject(context, "context", "companion", failures);
         requireObject(context, "context", "companionLoop", failures);
         requireObject(context, "context", "survivalEnvironment", failures);
+        requireObject(context, "context", "structureBlueprints", failures);
+        requireObject(context, "context", "travelPolicy", failures);
         requireObject(context, "context", "skillRegistry", failures);
         requireJsonArray(context, "context", "actionPrimitives", failures);
         requireObject(context, "context", "agentLoop", failures);
@@ -537,6 +566,11 @@ public final class DevTestHttpServer {
         JsonObject feedback = observation.has("feedback") && observation.get("feedback").isJsonObject()
                 ? observation.getAsJsonObject("feedback")
                 : new JsonObject();
+        JsonObject resources = observation.has("resources") && observation.get("resources").isJsonObject()
+                ? observation.getAsJsonObject("resources")
+                : new JsonObject();
+        requireObject(resources, "observationFrame.resources", "structureBlueprints", failures);
+        requireObject(resources, "observationFrame.resources", "travelPolicy", failures);
         requireJsonArray(feedback, "observationFrame.feedback", "capabilityGaps", failures);
         requireProperty(skills, "skillRegistry", "schemaVersion", failures);
         requireJsonArray(skills, "skillRegistry", "skills", failures);
@@ -551,6 +585,10 @@ public final class DevTestHttpServer {
         requirePrimitive(primitives, "breed_animals", failures);
         requirePrimitive(primitives, "tame_animal", failures);
         requirePrimitive(primitives, "build_redstone_template", failures);
+        requirePrimitive(primitives, "gather_materials", failures);
+        requirePrimitive(primitives, "preview_structure", failures);
+        requirePrimitive(primitives, "build_structure", failures);
+        requirePrimitive(primitives, "cancel_structure", failures);
         requirePrimitive(primitives, "break_block", failures);
         requirePrimitive(primitives, "place_block", failures);
         requirePrimitive(primitives, "gather_stone", failures);
@@ -677,15 +715,37 @@ public final class DevTestHttpServer {
                 addActionResult(json, SurvivalActions.buildRedstoneTemplate(player, template));
                 json.addProperty("template", template);
             }
+            case "gather_materials" -> {
+                String material = firstNonBlank(queryParam(uri, "material"), queryParam(uri, "category"), "placeable_blocks");
+                int count = intQueryParam(uri, "count", 64, 1, 2304);
+                addActionResult(json, MaterialGatherer.gatherMaterials(player, material, count));
+                json.addProperty("material", material);
+                json.addProperty("count", count);
+            }
+            case "preview_structure" -> {
+                String template = firstNonBlank(queryParam(uri, "template"), queryParam(uri, "blueprint"), "starter_cabin_7x7");
+                String style = firstNonBlank(queryParam(uri, "style"), "rustic");
+                addActionResult(json, StructureBuildController.previewStructure(player, template, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), style));
+                json.addProperty("template", template);
+                json.addProperty("style", style);
+            }
+            case "build_structure" -> {
+                String template = firstNonBlank(queryParam(uri, "template"), queryParam(uri, "blueprint"), "starter_cabin_7x7");
+                String style = firstNonBlank(queryParam(uri, "style"), "rustic");
+                boolean autoGather = booleanQueryParam(uri, "autoGather", true);
+                addActionResult(json, StructureBuildController.buildStructure(player, template, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), style, autoGather));
+                json.addProperty("template", template);
+                json.addProperty("style", style);
+                json.addProperty("autoGather", autoGather);
+            }
+            case "cancel_structure" -> addActionResult(json, StructureBuildController.cancelStructure(player));
             case "build_basic_house" -> {
-                NpcManager.buildBasicHouse(player);
-                json.addProperty("started", true);
-                json.addProperty("note", "Started basic shelter build if materials and target space are valid.");
+                addActionResult(json, StructureBuildController.buildStructure(player, "starter_cabin_7x7", optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), "rustic", false));
+                json.addProperty("note", "Compatibility action routed through starter_cabin_7x7 blueprint.");
             }
             case "build_large_house" -> {
-                NpcManager.buildLargeHouse(player);
-                json.addProperty("started", true);
-                json.addProperty("note", "Started large house build. If materials are short, the NPC will gather wood and resume automatically.");
+                addActionResult(json, StructureBuildController.buildStructure(player, "starter_cabin_7x7", optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), "rustic", true));
+                json.addProperty("note", "Compatibility action routed through starter_cabin_7x7 blueprint with autoGather.");
             }
             case "repair_structure", "repair_house", "repair_wall", "repair_door" -> {
                 int radius = intQueryParam(uri, "radius", 12, 4, McAiConfig.NPC_TASK_RADIUS.get());
@@ -807,7 +867,7 @@ public final class DevTestHttpServer {
             default -> {
                 json.addProperty("ok", false);
                 json.addProperty("error", "UNSUPPORTED_ACTION");
-                json.addProperty("message", "Allowed actions: collect_items, harvest_logs, gather_stone, survival_assist, till_field, plant_crop, harvest_crops, hunt_food_animal, feed_animal, breed_animals, tame_animal, build_redstone_template, build_basic_house, build_large_house, start_plan, taskgraph_next, continue_plan, report_plan, cancel_plan, inspect_block, break_block, place_block, craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, approve_chest_materials, revoke_chest_materials, equip_best_gear, stop, stop_guard, come, follow.");
+                json.addProperty("message", "Allowed actions: collect_items, harvest_logs, gather_stone, gather_materials, preview_structure, build_structure, cancel_structure, survival_assist, till_field, plant_crop, harvest_crops, hunt_food_animal, feed_animal, breed_animals, tame_animal, build_redstone_template, build_basic_house, build_large_house, start_plan, taskgraph_next, continue_plan, report_plan, cancel_plan, inspect_block, break_block, place_block, craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, approve_chest_materials, revoke_chest_materials, equip_best_gear, stop, stop_guard, come, follow.");
             }
         }
 
@@ -1156,8 +1216,13 @@ public final class DevTestHttpServer {
         ));
     }
 
-    private static String firstNonBlank(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value.trim();
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private static BlockPos queryBlockPos(URI uri, BlockPos fallback) {
@@ -1165,6 +1230,26 @@ public final class DevTestHttpServer {
         int y = intQueryParam(uri, "y", fallback.getY(), -2048, 2048);
         int z = intQueryParam(uri, "z", fallback.getZ(), -30000000, 30000000);
         return new BlockPos(x, y, z);
+    }
+
+    private static BlockPos optionalQueryBlockPos(URI uri) {
+        if (queryParam(uri, "x").isBlank() || queryParam(uri, "y").isBlank() || queryParam(uri, "z").isBlank()) {
+            return null;
+        }
+        return queryBlockPos(uri, BlockPos.ZERO);
+    }
+
+    private static Direction queryDirection(URI uri, Direction fallback) {
+        String raw = firstNonBlank(queryParam(uri, "facing"), queryParam(uri, "direction"), queryParam(uri, "forward"));
+        if (!raw.isBlank()) {
+            String normalized = raw.trim().toLowerCase(Locale.ROOT);
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                if (direction.getName().equals(normalized)) {
+                    return direction;
+                }
+            }
+        }
+        return fallback == null || fallback.getAxis().isVertical() ? Direction.NORTH : fallback;
     }
 
     private static Request readRequest(Socket socket) throws IOException {
