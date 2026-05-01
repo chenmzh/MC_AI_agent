@@ -133,6 +133,66 @@ public final class TaskControllerRegistry {
                 List.of("active_task_stopped_or_idle")
         ));
         register(controllers, metadata(
+                "preview_machine",
+                true,
+                false,
+                "Previews a deterministic redstone or survival-machine template, including risk, footprint, material budget, entity needs, and site blockers.",
+                List.of("template_or_machine_intent", "owner_online_same_dimension"),
+                List.of("machine_template_catalog", "npc_storage_materials", "approved_container_materials", "build_anchor"),
+                List.of("machine_template_registry", "machine_safety_checker", "resource_assessment"),
+                List.of("no_world_change", "does_not_use_player_inventory", "high_risk_requires_saved_plan_before_build"),
+                targetScopePolicy(true, true, false, true, "player_relative_or_explicit_machine_anchor"),
+                List.of("machine_preview", "risk_summary", "material_plan", "site_check")
+        ));
+        register(controllers, metadata(
+                "authorize_machine_plan",
+                true,
+                false,
+                "Creates a saved build authorization for the exact high-risk machine template, anchor, dimension, facing, range, and risk level.",
+                List.of("template_or_machine_intent", "owner_online_same_dimension", "player_confirmation_after_preview"),
+                List.of("machine_template_catalog", "build_anchor", "plan_ttl"),
+                List.of("machine_authorization_store", "machine_template_registry"),
+                List.of("no_world_change", "authorization_binds_player_dimension_anchor_facing_template_and_risk", "expires_automatically"),
+                targetScopePolicy(true, true, false, true, "exact_previewed_machine_anchor"),
+                List.of("machine_plan_authorized", "authorization_snapshot")
+        ));
+        register(controllers, metadata(
+                "build_machine",
+                false,
+                true,
+                "Builds an authorized deterministic vanilla redstone or survival-machine template by direct placement while consuming NPC or approved-container materials.",
+                List.of("active_npc", "owner_online_same_dimension", "matching_saved_plan_for_high_risk_templates", "safe_build_volume", "materials_available"),
+                List.of("npc_storage_materials", "approved_container_materials", "machine_template_catalog", "authorization_snapshot"),
+                List.of("npc_runtime", "npc_inventory", "build_volume", "nearby_containers", "machine_authorization_store"),
+                List.of("does_not_use_player_inventory", "container_materials_require_approval", "template_only", "blocks_protected_base_core_blocks", "does_not_spawn_villagers_or_monsters", "blocks_forbidden_lag_or_exploit_machines"),
+                targetScopePolicy(true, true, false, true, "authorized_machine_anchor"),
+                List.of("machine_blocks_placed", "materials_consumed", "verification_snapshot", "may_wait_for_entities")
+        ));
+        register(controllers, metadata(
+                "test_machine",
+                true,
+                false,
+                "Verifies a machine template in-place without modifying the world, checking required blocks, redstone/fluid presence, collection paths, and entity readiness.",
+                List.of("template_or_machine_intent", "owner_online_same_dimension"),
+                List.of("machine_template_catalog", "build_anchor", "nearby_entities", "nearby_blocks"),
+                List.of("machine_verifier", "site_scan"),
+                List.of("no_world_change", "missing_villagers_or_zombies_report_WAITING_FOR_ENTITIES_not_structure_failure"),
+                targetScopePolicy(true, true, false, true, "machine_anchor"),
+                List.of("machine_verification", "blocker_or_waiting_state")
+        ));
+        register(controllers, metadata(
+                "cancel_machine_build",
+                true,
+                false,
+                "Cancels the current machine build authorization for the player.",
+                List.of("owner_online_same_dimension"),
+                List.of("authorization_snapshot"),
+                List.of("machine_authorization_store"),
+                List.of("safe_stop", "no_world_change"),
+                targetScopePolicy(true, true, false, false, "current_player_authorization"),
+                List.of("machine_authorization_cancelled_or_idle")
+        ));
+        register(controllers, metadata(
                 "build_basic_house",
                 false,
                 true,
@@ -292,13 +352,13 @@ public final class TaskControllerRegistry {
                 "build_redstone_template",
                 false,
                 true,
-                "Builds a verified redstone template; first version supports a pressure-door template only.",
-                List.of("active_npc", "owner_online_same_dimension", "door_in_npc_storage", "two_pressure_plates_in_npc_storage", "clear_flat_target_space"),
-                List.of("door", "pressure_plates"),
-                List.of("npc_runtime", "npc_inventory", "build_volume"),
-                List.of("requires_player_command_or_saved_plan_permission", "template_only", "does_not_modify_unknown_redstone"),
+                "Compatibility action for low-risk redstone templates backed by the machine template system.",
+                List.of("active_npc", "owner_online_same_dimension", "approved_redstone_template", "materials_available", "clear_target_space"),
+                List.of("doors_or_lamps_or_redstone_components", "npc_storage_materials", "approved_container_materials"),
+                List.of("npc_runtime", "npc_inventory", "build_volume", "machine_template_registry"),
+                List.of("requires_player_command_or_saved_plan_permission", "template_only", "does_not_modify_unknown_redstone", "does_not_build_high_frequency_clocks"),
                 targetScopePolicy(true, true, false, true, "player_facing_clear_flat_anchor"),
-                List.of("pressure_door_template_built", "materials_consumed")
+                List.of("redstone_template_built", "materials_consumed", "verification_snapshot")
         ));
         return Collections.unmodifiableMap(controllers);
     }

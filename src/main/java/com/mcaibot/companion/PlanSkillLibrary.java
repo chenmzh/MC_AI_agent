@@ -165,7 +165,7 @@ final class PlanSkillLibrary {
     }
 
     static String supportedSkillsSummary() {
-        return "prepare_basic_tools, prepare_build_materials, gather_materials, gather_wood, gather_stone, mine_resources, collect_drops, craft_axe, craft_pickaxe, craft_planks, craft_sticks, craft_stone_axe, craft_stone_pickaxe, build_basic_shelter, build_large_house, build_structure, preview_structure, repair_structure, equip_gear, deposit_storage, protect_player, create_inspect, create_wrench";
+        return "prepare_basic_tools, prepare_build_materials, gather_materials, gather_wood, gather_stone, mine_resources, collect_drops, craft_axe, craft_pickaxe, craft_planks, craft_sticks, craft_stone_axe, craft_stone_pickaxe, build_basic_shelter, build_large_house, build_structure, preview_structure, preview_machine, authorize_machine_plan, build_machine, test_machine, repair_structure, equip_gear, deposit_storage, protect_player, create_inspect, create_wrench";
     }
 
     private static StageAssessment assessBasicTools(ServerPlayer player, PlanManager.PlanSnapshot plan) {

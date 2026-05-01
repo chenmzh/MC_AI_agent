@@ -136,6 +136,9 @@ public final class DevTestHttpServer {
         if ("GET".equals(method) && "/blueprints".equals(path)) {
             return new JsonResponse(200, blueprints());
         }
+        if ("GET".equals(method) && "/machines".equals(path)) {
+            return new JsonResponse(200, onServer(uri, server -> machines(server, uri)));
+        }
         if ("POST".equals(method) && "/test/runtime".equals(path)) {
             return new JsonResponse(200, onServer(uri, server -> runtimeContextTest(server, uri)));
         }
@@ -162,7 +165,7 @@ public final class DevTestHttpServer {
             return new JsonResponse(200, onServer(uri, server -> runAction(server, uri, action)));
         }
 
-        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, GET /blueprints, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|gather_materials|preview_structure|build_structure|cancel_structure|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
+        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, GET /blueprints, GET /machines, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|gather_materials|preview_structure|build_structure|cancel_structure|preview_machine|authorize_machine_plan|build_machine|test_machine|cancel_machine_build|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
         return new JsonResponse(404, notFound);
     }
 
@@ -183,6 +186,7 @@ public final class DevTestHttpServer {
         endpoints.add("GET /observation?player=<name>");
         endpoints.add("GET /skills");
         endpoints.add("GET /blueprints");
+        endpoints.add("GET /machines?player=<name>");
         endpoints.add("POST /test/runtime?player=<name>");
         endpoints.add("POST /test/agent_contracts?player=<name>");
         endpoints.add("POST /test/taskgraph_next?player=<name>");
@@ -206,6 +210,11 @@ public final class DevTestHttpServer {
         endpoints.add("POST /action/preview_structure?player=<name>&template=starter_cabin_7x7|storage_shed_5x7|bridge_3w|watchtower_5x5|farm_fence_9x9|path_lights");
         endpoints.add("POST /action/build_structure?player=<name>&template=starter_cabin_7x7&autoGather=true");
         endpoints.add("POST /action/cancel_structure?player=<name>");
+        endpoints.add("POST /action/preview_machine?player=<name>&machine=mob_drop_tower_v1|iron_farm_v1|villager_breeder_v1|trading_hall_v1");
+        endpoints.add("POST /action/authorize_machine_plan?player=<name>&machine=mob_drop_tower_v1");
+        endpoints.add("POST /action/build_machine?player=<name>&machine=mob_drop_tower_v1");
+        endpoints.add("POST /action/test_machine?player=<name>&machine=mob_drop_tower_v1");
+        endpoints.add("POST /action/cancel_machine_build?player=<name>");
         endpoints.add("POST /action/build_basic_house?player=<name>");
         endpoints.add("POST /action/build_large_house?player=<name>");
         endpoints.add("POST /action/repair_structure?player=<name>&radius=12");
@@ -334,6 +343,13 @@ public final class DevTestHttpServer {
         return json;
     }
 
+    private JsonObject machines(MinecraftServer server, URI uri) {
+        JsonObject json = baseOk("machines");
+        ServerPlayer player = selectPlayer(server, queryParam(uri, "player"));
+        json.add("catalog", MachineBuildController.catalogJson(player));
+        return json;
+    }
+
     private JsonObject state(MinecraftServer server, URI uri) {
         JsonObject json = baseOk("state");
         json.addProperty("serverVersion", server.getServerVersion());
@@ -450,6 +466,11 @@ public final class DevTestHttpServer {
         requireBooleanCapability(capabilities, "structureBlueprintTemplates", true, failures);
         requireBooleanCapability(capabilities, "structurePreviewAction", true, failures);
         requireBooleanCapability(capabilities, "structureBuildAction", true, failures);
+        requireBooleanCapability(capabilities, "machineBlueprintTemplates", true, failures);
+        requireBooleanCapability(capabilities, "machinePreviewAction", true, failures);
+        requireBooleanCapability(capabilities, "machineBuildAction", true, failures);
+        requireBooleanCapability(capabilities, "machinePlanAuthorization", true, failures);
+        requireBooleanCapability(capabilities, "createMachineBuilds", false, failures);
         requireBooleanCapability(capabilities, "travelController", true, failures);
         requireBooleanCapability(capabilities, "litematicaBlueprintProvider", false, failures);
         requireBooleanCapability(capabilities, "parallelNpcWork", false, failures);
@@ -466,10 +487,18 @@ public final class DevTestHttpServer {
         requireTaskControllerParallelSafe(taskControllerCatalog, "preview_structure", true, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "build_structure", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "gather_materials", false, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "preview_machine", true, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "authorize_machine_plan", true, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "build_machine", false, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "test_machine", true, failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "collect_items", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "gather_materials", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "preview_structure", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "build_structure", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "preview_machine", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "authorize_machine_plan", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "build_machine", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "test_machine", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "gather_stone", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "build_basic_house", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "repair_structure", failures);
@@ -570,6 +599,7 @@ public final class DevTestHttpServer {
                 ? observation.getAsJsonObject("resources")
                 : new JsonObject();
         requireObject(resources, "observationFrame.resources", "structureBlueprints", failures);
+        requireObject(resources, "observationFrame.resources", "machineTemplates", failures);
         requireObject(resources, "observationFrame.resources", "travelPolicy", failures);
         requireJsonArray(feedback, "observationFrame.feedback", "capabilityGaps", failures);
         requireProperty(skills, "skillRegistry", "schemaVersion", failures);
@@ -589,6 +619,11 @@ public final class DevTestHttpServer {
         requirePrimitive(primitives, "preview_structure", failures);
         requirePrimitive(primitives, "build_structure", failures);
         requirePrimitive(primitives, "cancel_structure", failures);
+        requirePrimitive(primitives, "preview_machine", failures);
+        requirePrimitive(primitives, "authorize_machine_plan", failures);
+        requirePrimitive(primitives, "build_machine", failures);
+        requirePrimitive(primitives, "test_machine", failures);
+        requirePrimitive(primitives, "cancel_machine_build", failures);
         requirePrimitive(primitives, "break_block", failures);
         requirePrimitive(primitives, "place_block", failures);
         requirePrimitive(primitives, "gather_stone", failures);
@@ -739,6 +774,27 @@ public final class DevTestHttpServer {
                 json.addProperty("autoGather", autoGather);
             }
             case "cancel_structure" -> addActionResult(json, StructureBuildController.cancelStructure(player));
+            case "preview_machine" -> {
+                String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
+                addActionResult(json, MachineBuildController.previewMachine(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                json.addProperty("machine", machine);
+            }
+            case "authorize_machine_plan" -> {
+                String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
+                addActionResult(json, MachineBuildController.authorizeMachinePlan(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                json.addProperty("machine", machine);
+            }
+            case "build_machine" -> {
+                String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
+                addActionResult(json, MachineBuildController.buildMachine(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                json.addProperty("machine", machine);
+            }
+            case "test_machine" -> {
+                String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
+                addActionResult(json, MachineBuildController.testMachine(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                json.addProperty("machine", machine);
+            }
+            case "cancel_machine_build" -> addActionResult(json, MachineBuildController.cancelMachineBuild(player));
             case "build_basic_house" -> {
                 addActionResult(json, StructureBuildController.buildStructure(player, "starter_cabin_7x7", optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), "rustic", false));
                 json.addProperty("note", "Compatibility action routed through starter_cabin_7x7 blueprint.");
@@ -867,7 +923,7 @@ public final class DevTestHttpServer {
             default -> {
                 json.addProperty("ok", false);
                 json.addProperty("error", "UNSUPPORTED_ACTION");
-                json.addProperty("message", "Allowed actions: collect_items, harvest_logs, gather_stone, gather_materials, preview_structure, build_structure, cancel_structure, survival_assist, till_field, plant_crop, harvest_crops, hunt_food_animal, feed_animal, breed_animals, tame_animal, build_redstone_template, build_basic_house, build_large_house, start_plan, taskgraph_next, continue_plan, report_plan, cancel_plan, inspect_block, break_block, place_block, craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, approve_chest_materials, revoke_chest_materials, equip_best_gear, stop, stop_guard, come, follow.");
+                json.addProperty("message", "Allowed actions: collect_items, harvest_logs, gather_stone, gather_materials, preview_structure, build_structure, cancel_structure, preview_machine, authorize_machine_plan, build_machine, test_machine, cancel_machine_build, survival_assist, till_field, plant_crop, harvest_crops, hunt_food_animal, feed_animal, breed_animals, tame_animal, build_redstone_template, build_basic_house, build_large_house, start_plan, taskgraph_next, continue_plan, report_plan, cancel_plan, inspect_block, break_block, place_block, craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, approve_chest_materials, revoke_chest_materials, equip_best_gear, stop, stop_guard, come, follow.");
             }
         }
 

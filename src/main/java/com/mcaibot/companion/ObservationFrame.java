@@ -49,6 +49,7 @@ public final class ObservationFrame {
         resources.add("crafting", copy(context, "crafting"));
         resources.add("blueprints", copy(context, "blueprints"));
         resources.add("structureBlueprints", copy(context, "structureBlueprints"));
+        resources.add("machineTemplates", copy(context, "machineTemplates"));
         resources.add("travelPolicy", copy(context, "travelPolicy"));
         frame.add("resources", resources);
 

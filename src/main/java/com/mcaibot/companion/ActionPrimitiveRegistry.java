@@ -63,6 +63,28 @@ public final class ActionPrimitiveRegistry {
                         SurvivalActions.tameAnimal(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
                 case "build_redstone_template", "redstone_template" -> withNpc(player, "build_redstone_template", () ->
                         SurvivalActions.buildRedstoneTemplate(player, firstString(args, "template", "name", "structure")));
+                case "preview_machine" -> withNpc(player, "preview_machine", () ->
+                        MachineBuildController.previewMachine(player,
+                                firstString(args, "machine", "template", "templateId", "structure"),
+                                blockPos(args),
+                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                case "authorize_machine_plan" -> withNpc(player, "authorize_machine_plan", () ->
+                        MachineBuildController.authorizeMachinePlan(player,
+                                firstString(args, "machine", "template", "templateId", "structure"),
+                                blockPos(args),
+                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                case "build_machine" -> withNpc(player, "build_machine", () ->
+                        MachineBuildController.buildMachine(player,
+                                firstString(args, "machine", "template", "templateId", "structure"),
+                                blockPos(args),
+                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                case "test_machine" -> withNpc(player, "test_machine", () ->
+                        MachineBuildController.testMachine(player,
+                                firstString(args, "machine", "template", "templateId", "structure"),
+                                blockPos(args),
+                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                case "cancel_machine_build" -> withNpc(player, "cancel_machine_build", () ->
+                        MachineBuildController.cancelMachineBuild(player));
                 case "gather_materials" -> withNpc(player, "gather_materials", () ->
                         MaterialGatherer.gatherMaterials(player,
                                 firstString(args, "material", "category", "target", "item", "block"),

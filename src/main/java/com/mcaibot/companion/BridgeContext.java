@@ -133,6 +133,7 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         context.add("resources", ResourceAssessment.snapshotFor(player));
         context.add("blueprints", ResourceAssessment.blueprintsFor(player));
         context.add("structureBlueprints", BlueprintTemplateRegistry.catalogJson());
+        context.add("machineTemplates", MachineBuildController.catalogJson(player));
         context.add("travelPolicy", TravelController.policyJson());
         context.add("survivalEnvironment", SurvivalEnvironment.snapshotFor(player));
         context.add("modded", ModInteractionManager.snapshotFor(player));
@@ -218,6 +219,11 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         capabilities.addProperty("structureBlueprintTemplates", true);
         capabilities.addProperty("structurePreviewAction", true);
         capabilities.addProperty("structureBuildAction", true);
+        capabilities.addProperty("machineBlueprintTemplates", true);
+        capabilities.addProperty("machinePreviewAction", true);
+        capabilities.addProperty("machineBuildAction", true);
+        capabilities.addProperty("machinePlanAuthorization", true);
+        capabilities.addProperty("createMachineBuilds", false);
         capabilities.addProperty("travelController", true);
         capabilities.addProperty("litematicaBlueprintProvider", false);
         capabilities.addProperty("taskControllerRuntime", false);

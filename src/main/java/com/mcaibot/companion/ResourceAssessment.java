@@ -147,6 +147,7 @@ public final class ResourceAssessment {
         largeHouse.addProperty("checkpointPolicy", "world-state checkpoint: placed blocks are skipped when rebuilding the queue");
         root.add("large_7x7_house", largeHouse);
         root.add("structureTemplates", BlueprintTemplateRegistry.catalogJson());
+        root.add("machineTemplates", MachineTemplateRegistry.catalogJson());
         return root;
     }
 

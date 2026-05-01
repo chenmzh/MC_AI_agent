@@ -285,55 +285,7 @@ public final class SurvivalActions {
     }
 
     public static ActionResult buildRedstoneTemplate(ServerPlayer player, String templateName) {
-        Mob npc = requireNpc(player, "build_redstone_template");
-        if (npc == null) {
-            return missingNpc();
-        }
-        String template = normalize(templateName);
-        if (template.isBlank() || template.equals("redstone") || template.equals("auto_door")) {
-            template = "pressure_door";
-        }
-        if (!template.equals("pressure_door") && !template.equals("automatic_door")) {
-            return ActionResult.blocked("UNSUPPORTED_REDSTONE_TEMPLATE",
-                    "Supported redstone template v1 is pressure_door only.",
-                    "Ask for pressure_door, or add another verified template to the registry first.");
-        }
-        Container inventory = NpcManager.activeNpcInventory(player.getServer());
-        if (inventory == null) {
-            return missingNpc();
-        }
-        if (!hasNpcItem(player, stack -> itemId(stack).endsWith("_door"))
-                || countNpcItems(player, stack -> itemId(stack).endsWith("_pressure_plate")) < 2) {
-            return ActionResult.blocked("NEED_REDSTONE_DOOR_MATERIALS",
-                    "NPC storage needs one door and two pressure plates for the pressure_door template.",
-                    "Put a door and two pressure plates in NPC storage, or ask the NPC to craft them first.");
-        }
-        Direction facing = horizontal(player.getDirection());
-        BlockPos lower = player.blockPosition().relative(facing, 3);
-        BlockPos frontPlate = lower.relative(facing);
-        BlockPos backPlate = lower.relative(facing.getOpposite());
-        ServerLevel level = player.serverLevel();
-        if (!canPlaceDoorTemplate(level, lower, frontPlate, backPlate)) {
-            return ActionResult.blocked("REDSTONE_TEMPLATE_SPACE_BLOCKED",
-                    "The pressure door template needs clear two-block door space plus clear pressure plate blocks on solid ground.",
-                    "Stand facing a clear flat location and retry.");
-        }
-
-        consumeNpcItem(inventory, stack -> itemId(stack).endsWith("_door"), 1);
-        consumeNpcItem(inventory, stack -> itemId(stack).endsWith("_pressure_plate"), 2);
-        BlockState lowerDoor = Blocks.OAK_DOOR.defaultBlockState()
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
-                .setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.LOWER)
-                .setValue(BlockStateProperties.DOOR_HINGE, DoorHingeSide.LEFT)
-                .setValue(BlockStateProperties.OPEN, false);
-        level.setBlock(lower, lowerDoor, 3);
-        level.setBlock(lower.above(), lowerDoor.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER), 3);
-        level.setBlock(frontPlate, Blocks.OAK_PRESSURE_PLATE.defaultBlockState(), 3);
-        level.setBlock(backPlate, Blocks.OAK_PRESSURE_PLATE.defaultBlockState(), 3);
-        String message = "Built verified pressure_door template at " + lower.toShortString() + ".";
-        NpcChat.say(player, message);
-        TaskFeedback.info(player, npc, "build_redstone_template", "REDSTONE_TEMPLATE_BUILT", message);
-        return ActionResult.success("REDSTONE_TEMPLATE_BUILT", message).withEffect("template", "pressure_door");
+        return MachineBuildController.buildRedstoneTemplate(player, templateName);
     }
 
     private static boolean canPlaceDoorTemplate(ServerLevel level, BlockPos lower, BlockPos frontPlate, BlockPos backPlate) {

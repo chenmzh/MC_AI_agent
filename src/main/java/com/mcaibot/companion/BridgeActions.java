@@ -106,6 +106,28 @@ public final class BridgeActions {
                     emitActionResult(player, "tame_animal", SurvivalActions.tameAnimal(player, firstNonBlank(action.value(), action.item()), actionRadius(decision)), false);
             case "build_redstone_template", "redstone_template" ->
                     emitActionResult(player, "build_redstone_template", SurvivalActions.buildRedstoneTemplate(player, firstNonBlank(action.value(), action.block(), action.item())), false);
+            case "preview_machine" ->
+                    emitActionResult(player, "preview_machine", MachineBuildController.previewMachine(player,
+                            machineFromAction(action),
+                            action.position() == null ? null : blockPos(action.position()),
+                            buildFacing(player, action)), false);
+            case "authorize_machine_plan" ->
+                    emitActionResult(player, "authorize_machine_plan", MachineBuildController.authorizeMachinePlan(player,
+                            machineFromAction(action),
+                            action.position() == null ? null : blockPos(action.position()),
+                            buildFacing(player, action)), false);
+            case "build_machine" ->
+                    emitActionResult(player, "build_machine", MachineBuildController.buildMachine(player,
+                            machineFromAction(action),
+                            action.position() == null ? null : blockPos(action.position()),
+                            buildFacing(player, action)), false);
+            case "test_machine" ->
+                    emitActionResult(player, "test_machine", MachineBuildController.testMachine(player,
+                            machineFromAction(action),
+                            action.position() == null ? null : blockPos(action.position()),
+                            buildFacing(player, action)), false);
+            case "cancel_machine_build" ->
+                    emitActionResult(player, "cancel_machine_build", MachineBuildController.cancelMachineBuild(player), false);
             case "gather_materials" ->
                     emitActionResult(player, "gather_materials", MaterialGatherer.gatherMaterials(player,
                             firstNonBlank(action.item(), action.block(), action.value(), action.message(), "placeable_blocks"),
@@ -387,6 +409,11 @@ public final class BridgeActions {
                 || normalized.equals("craft_from_chest_at_table")
                 || normalized.equals("craft_chest_item_at_table")
                 || normalized.equals("gather_materials")
+                || normalized.equals("preview_machine")
+                || normalized.equals("authorize_machine_plan")
+                || normalized.equals("build_machine")
+                || normalized.equals("test_machine")
+                || normalized.equals("cancel_machine_build")
                 || normalized.equals("preview_structure")
                 || normalized.equals("build_structure")
                 || normalized.equals("cancel_structure")
@@ -521,6 +548,12 @@ public final class BridgeActions {
         String explicit = firstNonBlank(action.block(), action.item(), action.value(), action.key(), "");
         String inferred = BlueprintTemplateRegistry.inferTemplate(firstNonBlank(explicit, action.message(), ""));
         return explicit.isBlank() ? inferred : BlueprintTemplateRegistry.normalizeTemplate(inferred.isBlank() ? explicit : inferred);
+    }
+
+    private static String machineFromAction(BridgeDecision.Action action) {
+        String explicit = firstNonBlank(action.block(), action.item(), action.value(), action.key(), "");
+        String inferred = MachineTemplateRegistry.inferTemplate(firstNonBlank(explicit, action.message(), ""));
+        return explicit.isBlank() ? inferred : MachineTemplateRegistry.normalizeTemplate(inferred.isBlank() ? explicit : inferred);
     }
 
     private static void remember(ServerPlayer player, BridgeDecision decision, NpcProfileStore profileStore) {

@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
 
 public final class BlockPaletteResolver {
     private static final int CONTAINER_SCAN_RADIUS = 16;
@@ -128,9 +129,65 @@ public final class BlockPaletteResolver {
             case "sand" -> snapshot.sand();
             case "dirt", "soil" -> snapshot.dirt();
             case "glass_like", "glass", "window" -> snapshot.glassLike();
-            case "placeable_blocks", "blocks", "building_blocks" -> snapshot.availableAfterLogPlankPotential();
+            case "placeable_blocks", "blocks", "building_blocks", "large_placeable_blocks" -> snapshot.availableAfterLogPlankPotential();
+            case "redstone_components" -> countItems(player, stack -> {
+                String id = itemId(stack);
+                return id.equals("minecraft:redstone") || id.equals("minecraft:redstone_torch") || id.equals("minecraft:repeater") || id.equals("minecraft:comparator");
+            });
+            case "hoppers" -> countItems(player, stack -> itemId(stack).equals("minecraft:hopper"));
+            case "chests" -> countItems(player, stack -> itemId(stack).endsWith("chest") || itemId(stack).equals("minecraft:barrel"));
+            case "water_buckets" -> countItems(player, stack -> itemId(stack).equals("minecraft:water_bucket"));
+            case "lava_buckets" -> countItems(player, stack -> itemId(stack).equals("minecraft:lava_bucket"));
+            case "beds" -> countItems(player, stack -> itemId(stack).endsWith("_bed"));
+            case "workstations" -> countItems(player, stack -> {
+                String id = itemId(stack);
+                return id.equals("minecraft:composter") || id.equals("minecraft:lectern") || id.equals("minecraft:fletching_table") || id.equals("minecraft:smithing_table") || id.equals("minecraft:grindstone") || id.equals("minecraft:cartography_table") || id.equals("minecraft:loom") || id.equals("minecraft:stonecutter") || id.equals("minecraft:barrel") || id.equals("minecraft:blast_furnace") || id.equals("minecraft:smoker");
+            });
+            case "trapdoors" -> countItems(player, stack -> itemId(stack).endsWith("_trapdoor"));
+            case "slabs" -> countItems(player, stack -> itemId(stack).endsWith("_slab"));
             default -> snapshot.availablePlaceableBlocks();
         };
+    }
+
+    public static int countItems(ServerPlayer player, Predicate<ItemStack> matcher) {
+        int total = 0;
+        for (Source source : sources(player, false)) {
+            Container container = source.container();
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                ItemStack stack = container.getItem(slot);
+                if (!stack.isEmpty() && matcher.test(stack)) {
+                    total += stack.getCount();
+                }
+            }
+        }
+        return total;
+    }
+
+    public static boolean consumeItems(ServerPlayer player, Predicate<ItemStack> matcher, int count) {
+        if (count <= 0) {
+            return true;
+        }
+        if (countItems(player, matcher) < count) {
+            return false;
+        }
+        int remaining = count;
+        for (Source source : sources(player, true)) {
+            Container container = source.container();
+            for (int slot = 0; slot < container.getContainerSize() && remaining > 0; slot++) {
+                ItemStack stack = container.getItem(slot);
+                if (stack.isEmpty() || !matcher.test(stack)) {
+                    continue;
+                }
+                int used = Math.min(remaining, stack.getCount());
+                stack.shrink(used);
+                container.setChanged();
+                remaining -= used;
+            }
+            if (remaining <= 0) {
+                return true;
+            }
+        }
+        return remaining <= 0;
     }
 
     private static ResolvedBlock consumeMatching(ServerPlayer player, StackMatcher matcher, String reason) {

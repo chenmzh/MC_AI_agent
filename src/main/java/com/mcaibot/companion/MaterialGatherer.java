@@ -37,13 +37,23 @@ public final class MaterialGatherer {
         }
 
         return switch (category) {
-            case "logs", "placeable_blocks" -> gatherLogs(player, category, target, available, missing, plan);
+            case "logs", "placeable_blocks", "large_placeable_blocks" -> gatherLogs(player, category, target, available, missing, plan);
             case "stone" -> gatherStone(player, target, available, missing, plan);
             case "sand" -> gatherNatural(player, category, target, available, missing, plan);
             case "dirt" -> gatherNatural(player, category, target, available, missing, plan);
             case "glass_like" -> gatherGlassLike(player, target, available, missing, plan);
+            case "redstone_components", "hoppers", "chests", "water_buckets", "lava_buckets", "beds", "workstations", "trapdoors", "slabs" ->
+                    ActionResult.blocked("MACHINE_MATERIAL_SOURCE_REQUIRED",
+                                    "Machine material category '" + category + "' is short by " + missing + ". This stage reports the gap but does not deep-mine or run complex autocrafting chains.",
+                                    "Provide the item in NPC storage, approve a nearby material chest, or ask for a smaller/safer machine template.")
+                            .withObservation("materialPlan", plan)
+                            .withEffect("material", category)
+                            .withEffect("target", target)
+                            .withEffect("collected", available)
+                            .withEffect("missing", missing)
+                            .withEffect("source", "npc_storage_or_approved_container_required");
             default -> ActionResult.blocked("UNKNOWN_MATERIAL_CATEGORY",
-                            "Unsupported material category '" + material + "'. Supported: logs, stone, sand, dirt, glass_like, placeable_blocks.",
+                            "Unsupported material category '" + material + "'. Supported: logs, stone, sand, dirt, glass_like, placeable_blocks, redstone_components, hoppers, chests, water_buckets, lava_buckets, beds, workstations, trapdoors, slabs, large_placeable_blocks.",
                             "Ask for a supported material category or a specific blueprint template.")
                     .withObservation("materialPlan", plan);
         };
@@ -205,6 +215,16 @@ public final class MaterialGatherer {
             case "dirt", "soil", "土", "泥土" -> "dirt";
             case "glass", "glass_like", "window", "玻璃" -> "glass_like";
             case "blocks", "placeable", "placeable_blocks", "building_blocks", "材料", "建筑材料" -> "placeable_blocks";
+            case "large_placeable", "large_placeable_blocks", "machine_blocks" -> "large_placeable_blocks";
+            case "redstone", "redstone_components", "redstone_dust" -> "redstone_components";
+            case "hopper", "hoppers" -> "hoppers";
+            case "chest", "chests", "barrel", "barrels" -> "chests";
+            case "water_bucket", "water_buckets" -> "water_buckets";
+            case "lava_bucket", "lava_buckets" -> "lava_buckets";
+            case "bed", "beds" -> "beds";
+            case "workstation", "workstations", "job_site", "job_sites" -> "workstations";
+            case "trapdoor", "trapdoors" -> "trapdoors";
+            case "slab", "slabs" -> "slabs";
             default -> normalized;
         };
     }
