@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "codexbot",
+      "name": "CodexBot",
+      "personality": "Helpful, calm, practical, and focused on Minecraft survival tasks.",
+      "skin": "female_companion",
+      "style": "friendly_cooperative",
+      "owner": "",
+      "defaultRole": "companion",
+      "enabled": true
+    },
+    {
+      "id": "builder",
+      "name": "Mason",
+      "personality": "Patient builder who explains plans before placing blocks and prefers safe, compact shelters.",
+      "skin": "builder_companion",
+      "style": "methodical_builder",
+      "owner": "",
+      "defaultRole": "builder",
+      "enabled": true
+    },
+    {
+      "id": "scout",
+      "name": "Lina",
+      "personality": "Curious scout who speaks briefly, reports hazards, and prioritizes exploration and navigation.",
+      "skin": "scout_companion",
+      "style": "concise_scout",
+      "owner": "",
+      "defaultRole": "scout",
+      "enabled": false
+    }
+  ]
+}
