@@ -597,6 +597,10 @@ public final class SkillRegistry {
             json.add("requiredContext", skill.requiredContext().deepCopy());
             json.add("permissions", skill.permissions().deepCopy());
             json.add("repairStrategies", skill.repairStrategies().deepCopy());
+            json.addProperty("supportsTargetSpec", TargetResolver.supportsTargetSpec(skill.name()));
+            if (TargetResolver.supportsTargetSpec(skill.name())) {
+                json.add("targetResolver", TargetResolver.contractJson());
+            }
             primitives.add(json);
         }
         return primitives;

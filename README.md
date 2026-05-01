@@ -10,6 +10,12 @@ bridge, and executes only whitelisted actions in game.
 - Chat listener modes: `mention` for `CodexBot`/profile names or `!ai `, and `all` for nearby plain chat when enabled.
 - Commands include `/mcai status`, `/mcai ask <message>`, `/mcai scan`, and `/mcai npc ...`.
 - Bridge endpoint defaults to `http://127.0.0.1:8787/bridge/decide`.
+- The Node AI bridge is tracked in this repository under `bridge/` so language
+  rules, action contracts, and Java execution changes can be tested together.
+- Natural target references such as "this block", "here", "the house I am
+  standing in", and "nearby chest" are represented as `targetSpec` and resolved
+  by the NeoForge `TargetResolver`; coordinates remain a debug/precision input,
+  not the default player interaction.
 - Bundled NPC profiles and player-model skins live in `npc_profiles.example.json` and `src/main/resources/assets/mc_ai_companion/textures/entity`.
 - Safe actions are explicitly mapped in code: `none`, `say`, `ask_clarifying_question`, `propose_plan`, `report_status`, `report_nearby`, `report_inventory`, `report_resources`, `survival_assist`, `till_field`, `plant_crop`, `harvest_crops`, `hunt_food_animal`, `feed_animal`, `breed_animals`, `tame_animal`, `build_redstone_template`, `come_to_player`, `follow_player`, `guard_player`, `protect_player`, `stop_guard`, `stop`, `goto_position`, `collect_items`, `mine_nearby_ore`, `gather_stone`, `harvest_logs`, `build_basic_house`, `build_large_house`, `repair_structure`, `craft_item`, `craft_at_table`, `craft_from_chest_at_table`, `equip_best_gear`, `remember`, and `recall`.
 - Work tasks are constrained to nearby dropped items, exposed ores/logs, mature crops, small starter fields, approved animal interactions, template-only redstone, simple building, crafting, equipment, memory, movement, following, and hostile-only protection.
@@ -21,6 +27,7 @@ bridge, and executes only whitelisted actions in game.
 ```text
 src/main/java/com/mcaibot/companion   NeoForge mod sources
 src/main/resources                    NeoForge metadata and bundled assets
+bridge                                Node AI bridge, schemas, and language tests
 docs                                  Architecture and development notes
 scripts/dev-test.ps1                  Local HTTP smoke test helper
 .github/workflows/build.yml           GitHub Actions build
@@ -29,8 +36,16 @@ scripts/dev-test.ps1                  Local HTTP smoke test helper
 ## Requirements
 
 - JDK 21
+- Node.js 20 or newer for `bridge/`
 - PowerShell on Windows, or a shell that can run the Gradle wrapper
-- Optional bridge service from the sibling `mc-ai-bot` project
+
+Install bridge dependencies once:
+
+```powershell
+cd bridge
+npm install
+cd ..
+```
 
 ## Build
 
@@ -46,6 +61,16 @@ build\libs\mc_ai_companion-0.1.0.jar
 
 To test in an installed NeoForge instance, copy the jar to that instance's
 `mods` directory and restart Minecraft.
+
+Full local validation:
+
+```powershell
+.\gradlew.bat build --no-daemon --console plain
+cd bridge
+npm run check
+npm test
+cd ..
+```
 
 ## Test With HMCL
 
@@ -105,8 +130,8 @@ World scanning is finite. Block/resource/container observation is capped at radi
 Start the local bridge in another terminal when AI decisions are needed:
 
 ```powershell
-cd ..\mc-ai-bot
-.\scripts\start-bridge.ps1
+cd bridge
+npm start
 ```
 
 The mod config defaults to no bridge token. If the bridge sets `BRIDGE_TOKEN`,
@@ -186,7 +211,10 @@ GET  /runtime?player=<name>
 GET  /observation?player=<name>
 POST /voice/transcript?player=<name>&text=<spoken text>
 POST /test/chest?player=<name>
+POST /test/agent_contracts?player=<name>
 POST /test/all?player=<name>
+GET  /blueprints
+GET  /machines
 POST /action/survival_assist?player=<name>
 POST /action/harvest_logs?player=<name>&radius=16&seconds=90
 POST /action/gather_stone?player=<name>&radius=16&count=3
@@ -198,6 +226,13 @@ POST /action/feed_animal?player=<name>&animal=cow&radius=16
 POST /action/breed_animals?player=<name>&animal=cow&radius=16
 POST /action/tame_animal?player=<name>&animal=wolf&radius=16
 POST /action/build_redstone_template?player=<name>&template=pressure_door
+POST /action/preview_structure?player=<name>&template=starter_cabin_7x7&targetSource=current_position
+POST /action/build_structure?player=<name>&template=bridge_3w&targetSource=current_position
+POST /action/gather_materials?player=<name>&material=logs&count=64
+POST /action/inspect_block?player=<name>&targetSource=looking_at
+POST /action/break_block?player=<name>&targetSource=looking_at
+POST /action/place_block?player=<name>&targetSource=current_position&block=oak_planks
+POST /action/preview_machine?player=<name>&template=mob_drop_tower_v1&targetSource=current_position
 POST /action/build_basic_house?player=<name>
 POST /action/stop?player=<name>
 POST /action/come?player=<name>
@@ -234,8 +269,9 @@ devTestServerPort = 8790
 - License metadata is MIT and the repository includes `LICENSE`.
 - Before publishing, review `git status --short`, then commit the source tree, resources, docs, workflow, wrapper files, and license.
 
-## Related Project
+## Bridge Notes
 
-This mod expects a localhost AI bridge compatible with `mc-ai-bot`. The bridge is
-kept separate so secrets, Node dependencies, runtime memory, and server logs do
-not need to be committed with the NeoForge mod.
+The bridge in `bridge/` keeps secrets, runtime memory, logs, and
+`node_modules/` ignored, but its prompts, schemas, deterministic normalizers, and
+tests are committed with the mod. This keeps natural-language behavior
+reproducible with Java action contracts.

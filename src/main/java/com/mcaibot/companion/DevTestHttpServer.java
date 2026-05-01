@@ -187,6 +187,7 @@ public final class DevTestHttpServer {
         endpoints.add("GET /skills");
         endpoints.add("GET /blueprints");
         endpoints.add("GET /machines?player=<name>");
+        endpoints.add("GET /observation includes perception.targetGrounding and targetResolver contract");
         endpoints.add("POST /test/runtime?player=<name>");
         endpoints.add("POST /test/agent_contracts?player=<name>");
         endpoints.add("POST /test/taskgraph_next?player=<name>");
@@ -225,8 +226,11 @@ public final class DevTestHttpServer {
         endpoints.add("POST /action/report_plan?player=<name>");
         endpoints.add("POST /action/cancel_plan?player=<name>");
         endpoints.add("POST /action/inspect_block?player=<name>&x=<x>&y=<y>&z=<z>");
+        endpoints.add("POST /action/inspect_block?player=<name>&targetSource=looking_at");
         endpoints.add("POST /action/break_block?player=<name>&x=<x>&y=<y>&z=<z>");
+        endpoints.add("POST /action/break_block?player=<name>&targetSource=looking_at");
         endpoints.add("POST /action/place_block?player=<name>&x=<x>&y=<y>&z=<z>&block=oak_planks");
+        endpoints.add("POST /action/place_block?player=<name>&targetSource=current_position&block=oak_planks");
         endpoints.add("POST /action/craft_item?player=<name>&item=axe|pickaxe|planks|sticks|door&count=1");
         endpoints.add("POST /action/craft_at_table?player=<name>&item=axe|pickaxe|planks|sticks|door&count=1");
         endpoints.add("POST /action/craft_from_chest_at_table?player=<name>&item=planks&count=16");
@@ -636,6 +640,18 @@ public final class DevTestHttpServer {
         requirePrimitive(primitives, "build_large_house", failures);
         requirePrimitive(primitives, "repair_structure", failures);
         requirePrimitive(primitives, "guard_player", failures);
+        requireTargetSpecPrimitive(primitives, "inspect_block", failures);
+        requireTargetSpecPrimitive(primitives, "break_block", failures);
+        requireTargetSpecPrimitive(primitives, "place_block", failures);
+        requireTargetSpecPrimitive(primitives, "use_mod_wrench", failures);
+        requireTargetSpecPrimitive(primitives, "salvage_nearby_wood_structure", failures);
+        requireTargetSpecPrimitive(primitives, "repair_structure", failures);
+        requireTargetSpecPrimitive(primitives, "preview_structure", failures);
+        requireTargetSpecPrimitive(primitives, "build_structure", failures);
+        requireTargetSpecPrimitive(primitives, "preview_machine", failures);
+        requireTargetSpecPrimitive(primitives, "build_machine", failures);
+        requireObject(perception, "observationFrame.perception", "targetGrounding", failures);
+        requireObject(observation, "observationFrame", "targetResolver", failures);
         requireActionResultContract(actionResult, failures);
         requireLatestTaskFeedbackActionResult(taskFeedback, failures);
 
@@ -773,7 +789,11 @@ public final class DevTestHttpServer {
             case "preview_structure" -> {
                 String template = firstNonBlank(queryParam(uri, "template"), queryParam(uri, "blueprint"), "starter_cabin_7x7");
                 String style = firstNonBlank(queryParam(uri, "style"), "rustic");
-                addActionResult(json, StructureBuildController.previewStructure(player, template, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), style));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("template", template);
+                args.addProperty("style", style);
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("preview_structure", args)));
                 json.addProperty("template", template);
                 json.addProperty("style", style);
             }
@@ -781,7 +801,12 @@ public final class DevTestHttpServer {
                 String template = firstNonBlank(queryParam(uri, "template"), queryParam(uri, "blueprint"), "starter_cabin_7x7");
                 String style = firstNonBlank(queryParam(uri, "style"), "rustic");
                 boolean autoGather = booleanQueryParam(uri, "autoGather", true);
-                addActionResult(json, StructureBuildController.buildStructure(player, template, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), style, autoGather));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("template", template);
+                args.addProperty("style", style);
+                args.addProperty("autoGather", autoGather);
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("build_structure", args)));
                 json.addProperty("template", template);
                 json.addProperty("style", style);
                 json.addProperty("autoGather", autoGather);
@@ -789,31 +814,51 @@ public final class DevTestHttpServer {
             case "cancel_structure" -> addActionResult(json, StructureBuildController.cancelStructure(player));
             case "preview_machine" -> {
                 String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
-                addActionResult(json, MachineBuildController.previewMachine(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("machine", machine);
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("preview_machine", args)));
                 json.addProperty("machine", machine);
             }
             case "authorize_machine_plan" -> {
                 String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
-                addActionResult(json, MachineBuildController.authorizeMachinePlan(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("machine", machine);
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("authorize_machine_plan", args)));
                 json.addProperty("machine", machine);
             }
             case "build_machine" -> {
                 String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
-                addActionResult(json, MachineBuildController.buildMachine(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("machine", machine);
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("build_machine", args)));
                 json.addProperty("machine", machine);
             }
             case "test_machine" -> {
                 String machine = firstNonBlank(queryParam(uri, "machine"), queryParam(uri, "template"), "mob_drop_tower_v1");
-                addActionResult(json, MachineBuildController.testMachine(player, machine, optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection())));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("machine", machine);
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("test_machine", args)));
                 json.addProperty("machine", machine);
             }
             case "cancel_machine_build" -> addActionResult(json, MachineBuildController.cancelMachineBuild(player));
             case "build_basic_house" -> {
-                addActionResult(json, StructureBuildController.buildStructure(player, "starter_cabin_7x7", optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), "rustic", false));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("template", "starter_cabin_7x7");
+                args.addProperty("style", "rustic");
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("build_basic_house", args)));
                 json.addProperty("note", "Compatibility action routed through starter_cabin_7x7 blueprint.");
             }
             case "build_large_house" -> {
-                addActionResult(json, StructureBuildController.buildStructure(player, "starter_cabin_7x7", optionalQueryBlockPos(uri), queryDirection(uri, player.getDirection()), "rustic", true));
+                JsonObject args = targetArgsFromQuery(uri);
+                args.addProperty("template", "starter_cabin_7x7");
+                args.addProperty("style", "rustic");
+                args.addProperty("facing", queryDirection(uri, player.getDirection()).getName());
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("build_large_house", args)));
                 json.addProperty("note", "Compatibility action routed through starter_cabin_7x7 blueprint with autoGather.");
             }
             case "repair_structure", "repair_house", "repair_wall", "repair_door" -> {
@@ -848,23 +893,18 @@ public final class DevTestHttpServer {
                 json.addProperty("started", true);
             }
             case "inspect_block" -> {
-                BlockPos pos = queryBlockPos(uri, player.blockPosition());
-                NpcManager.inspectBlock(player, pos);
-                json.addProperty("started", true);
-                json.add("target", blockPosJson(pos));
+                JsonObject args = targetArgsFromQuery(uri);
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("inspect_block", args)));
             }
             case "break_block" -> {
-                BlockPos pos = queryBlockPos(uri, player.blockPosition());
-                NpcManager.breakBlockAt(player, pos);
-                json.addProperty("started", true);
-                json.add("target", blockPosJson(pos));
+                JsonObject args = targetArgsFromQuery(uri);
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("break_block", args)));
             }
             case "place_block" -> {
-                BlockPos pos = queryBlockPos(uri, player.blockPosition());
+                JsonObject args = targetArgsFromQuery(uri);
                 String block = queryParam(uri, "block");
-                NpcManager.placeBlockAt(player, pos, block);
-                json.addProperty("started", true);
-                json.add("target", blockPosJson(pos));
+                args.addProperty("block", block);
+                addActionResult(json, ActionPrimitiveRegistry.execute(player, devActionCall("place_block", args)));
                 json.addProperty("block", block);
             }
             case "craft_item" -> {
@@ -1111,6 +1151,24 @@ public final class DevTestHttpServer {
         failures.add("actionPrimitives missing " + name);
     }
 
+    private static void requireTargetSpecPrimitive(JsonArray primitives, String name, JsonArray failures) {
+        for (JsonElement element : primitives) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject primitive = element.getAsJsonObject();
+            if (!primitive.has("name") || !name.equals(primitive.get("name").getAsString())) {
+                continue;
+            }
+            if (!primitive.has("supportsTargetSpec") || !primitive.get("supportsTargetSpec").getAsBoolean()) {
+                failures.add("actionPrimitives." + name + " must declare supportsTargetSpec=true");
+            }
+            requireObject(primitive, "actionPrimitives." + name, "targetResolver", failures);
+            return;
+        }
+        failures.add("actionPrimitives missing targetSpec primitive " + name);
+    }
+
     private static void requireActionResultContract(JsonObject actionResult, JsonArray failures) {
         requireProperty(actionResult, "actionResult", "schemaVersion", failures);
         requireProperty(actionResult, "actionResult", "status", failures);
@@ -1281,6 +1339,7 @@ public final class DevTestHttpServer {
                 null,
                 null,
                 "active",
+                null,
                 null
         ));
     }
@@ -1306,6 +1365,30 @@ public final class DevTestHttpServer {
             return null;
         }
         return queryBlockPos(uri, BlockPos.ZERO);
+    }
+
+    private static JsonObject targetArgsFromQuery(URI uri) {
+        JsonObject args = new JsonObject();
+        BlockPos pos = optionalQueryBlockPos(uri);
+        if (pos != null) {
+            args.add("position", blockPosJson(pos));
+        }
+        String targetSource = firstNonBlank(queryParam(uri, "targetSource"), queryParam(uri, "target"), queryParam(uri, "source"));
+        String targetKind = firstNonBlank(queryParam(uri, "targetKind"), queryParam(uri, "kind"), queryParam(uri, "targetType"));
+        String targetDescription = firstNonBlank(queryParam(uri, "targetDescription"), queryParam(uri, "description"), queryParam(uri, "selector"));
+        if (!targetSource.isBlank() || !targetKind.isBlank() || !targetDescription.isBlank()) {
+            JsonObject targetSpec = new JsonObject();
+            targetSpec.addProperty("source", firstNonBlank(targetSource, "looking_at"));
+            targetSpec.addProperty("kind", targetKind);
+            targetSpec.addProperty("description", targetDescription);
+            args.add("targetSpec", targetSpec);
+        }
+        return args;
+    }
+
+    private static ActionCall devActionCall(String name, JsonObject args) {
+        return new ActionCall(name, args == null ? new JsonObject() : args, "", "active",
+                "dev_http_action", "Execute dev HTTP action with target resolver support.", "normal");
     }
 
     private static Direction queryDirection(URI uri, Direction fallback) {

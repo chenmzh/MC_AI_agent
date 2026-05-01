@@ -2,6 +2,7 @@ package com.mcaibot.companion.tasks;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
+import com.mcaibot.companion.TargetResolver;
 
 import java.util.List;
 
@@ -40,6 +41,7 @@ public record TaskControllerMetadata(
         json.add("locks", stringArray(locks));
         json.add("safety", stringArray(safety));
         json.add("targetScopePolicy", targetScopePolicy.deepCopy());
+        json.addProperty("supportsTargetSpec", TargetResolver.supportsTargetSpec(name));
         json.add("effects", stringArray(effects));
         json.addProperty("legacyBacked", legacyBacked);
         return json;

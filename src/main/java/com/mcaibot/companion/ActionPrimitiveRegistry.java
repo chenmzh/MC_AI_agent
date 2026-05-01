@@ -63,26 +63,22 @@ public final class ActionPrimitiveRegistry {
                         SurvivalActions.tameAnimal(player, firstString(args, "animal", "entity", "targetAnimal"), radius(args)));
                 case "build_redstone_template", "redstone_template" -> withNpc(player, "build_redstone_template", () ->
                         SurvivalActions.buildRedstoneTemplate(player, firstString(args, "template", "name", "structure")));
-                case "preview_machine" -> withNpc(player, "preview_machine", () ->
-                        MachineBuildController.previewMachine(player,
-                                firstString(args, "machine", "template", "templateId", "structure"),
-                                blockPos(args),
-                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                case "preview_machine" -> withNpc(player, "preview_machine", () -> {
+                    String machine = firstString(args, "machine", "template", "templateId", "structure");
+                    Direction facing = directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()));
+                    ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, args, machine, facing, true);
+                    if (!target.resolved()) {
+                        return target.toBlockedActionResult("Look at the target site, stand near it, or use a supported machine template.");
+                    }
+                    return MachineBuildController.previewMachine(player, machine, target.position(), facing)
+                            .withObservation("target", target.toJson());
+                });
                 case "authorize_machine_plan" -> withNpc(player, "authorize_machine_plan", () ->
-                        MachineBuildController.authorizeMachinePlan(player,
-                                firstString(args, "machine", "template", "templateId", "structure"),
-                                blockPos(args),
-                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                        machineWithTarget(player, args, "authorize_machine_plan"));
                 case "build_machine" -> withNpc(player, "build_machine", () ->
-                        MachineBuildController.buildMachine(player,
-                                firstString(args, "machine", "template", "templateId", "structure"),
-                                blockPos(args),
-                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                        machineWithTarget(player, args, "build_machine"));
                 case "test_machine" -> withNpc(player, "test_machine", () ->
-                        MachineBuildController.testMachine(player,
-                                firstString(args, "machine", "template", "templateId", "structure"),
-                                blockPos(args),
-                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()))));
+                        machineWithTarget(player, args, "test_machine"));
                 case "cancel_machine_build" -> withNpc(player, "cancel_machine_build", () ->
                         MachineBuildController.cancelMachineBuild(player));
                 case "gather_materials" -> withNpc(player, "gather_materials", () ->
@@ -90,18 +86,9 @@ public final class ActionPrimitiveRegistry {
                                 firstString(args, "material", "category", "target", "item", "block"),
                                 count(args, 64)));
                 case "preview_structure" -> withNpc(player, "preview_structure", () ->
-                        StructureBuildController.previewStructure(player,
-                                firstString(args, "template", "templateId", "structure", "blueprint"),
-                                blockPos(args),
-                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
-                                firstString(args, "style", "palette", "materialPreference")));
+                        structureWithTarget(player, args, "preview_structure"));
                 case "build_structure" -> withNpc(player, "build_structure", () ->
-                        StructureBuildController.buildStructure(player,
-                                firstString(args, "template", "templateId", "structure", "blueprint"),
-                                blockPos(args),
-                                directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
-                                firstString(args, "style", "palette", "materialPreference"),
-                                boolArg(args, "autoGather", true)));
+                        structureWithTarget(player, args, "build_structure"));
                 case "cancel_structure" -> withNpc(player, "cancel_structure", () ->
                         StructureBuildController.cancelStructure(player));
                 case "move_to", "goto_position" -> moveTo(player, args);
@@ -139,24 +126,26 @@ public final class ActionPrimitiveRegistry {
                 });
                 case "inspect_block" -> inspectBlock(player, args);
                 case "break_block" -> withNpc(player, "break_block", () -> {
-                    BlockPos pos = blockPos(args);
-                    if (pos == null) {
-                        return ActionResult.blocked("MISSING_POSITION", "break_block needs exact x/y/z coordinates.", "Call inspect_block/report_nearby or ask the player for coordinates.");
+                    ResolvedTarget target = TargetResolver.resolveBlockTarget(player, args, "break_block", true);
+                    if (!target.resolved()) {
+                        return target.toBlockedActionResult("Look at the block, stand closer, or confirm a safe non-protected target.");
                     }
-                    NpcManager.breakBlockAt(player, pos);
-                    return ActionResult.started("STARTED", "NPC started player-like block breaking.");
+                    NpcManager.breakBlockAt(player, target.position());
+                    return ActionResult.started("STARTED", "NPC started player-like block breaking.")
+                            .withObservation("target", target.toJson());
                 });
                 case "place_block" -> withNpc(player, "place_block", () -> {
-                    BlockPos pos = blockPos(args);
-                    if (pos == null) {
-                        return ActionResult.blocked("MISSING_POSITION", "place_block needs exact x/y/z coordinates.", "Ask the player for coordinates or derive them from a verified blueprint.");
+                    ResolvedTarget target = TargetResolver.resolvePlacementTarget(player, args);
+                    if (!target.resolved()) {
+                        return target.toBlockedActionResult("Look at a placement face, say here/current location, or move to a clearer spot.");
                     }
                     String block = firstString(args, "block", "item", "material", "blockPreference");
                     if (block.isBlank()) {
                         return ActionResult.blocked("MISSING_BLOCK", "place_block needs a requested block/material.", "Choose a placeable material from resources or ask the player.");
                     }
-                    NpcManager.placeBlockAt(player, pos, block);
-                    return ActionResult.started("STARTED", "NPC started player-like block placement.");
+                    NpcManager.placeBlockAt(player, target.position(), block);
+                    return ActionResult.started("STARTED", "NPC started player-like block placement.")
+                            .withObservation("target", target.toJson());
                 });
                 case "craft_item" -> withNpc(player, "craft_item", () -> {
                     String item = firstString(args, "item", "targetItem", "recipe");
@@ -210,19 +199,25 @@ public final class ActionPrimitiveRegistry {
                     return ActionResult.started("STARTED", "Protection mode started. The NPC will attack hostile mobs but never player entities.");
                 });
                 case "build_basic_house", "build_basic_shelter" -> withNpc(player, "build_basic_house", () -> {
-                    BlockPos pos = blockPos(args);
-                    return StructureBuildController.buildStructure(player, "starter_cabin_7x7", pos,
-                                    directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
-                                    firstString(args, "style", "palette", "materialPreference"),
-                                    false)
+                    Direction facing = directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()));
+                    ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, args, "starter_cabin_7x7", facing, false);
+                    if (!target.resolved()) {
+                        return target.toBlockedActionResult("Look at the intended build site or stand where you want the shelter oriented.");
+                    }
+                    return StructureBuildController.buildStructure(player, "starter_cabin_7x7", target.position(),
+                                    facing, firstString(args, "style", "palette", "materialPreference"), false)
+                            .withObservation("target", target.toJson())
                             .withEffect("taskName", "build_basic_house");
                 });
                 case "build_large_house", "large_house" -> withNpc(player, "build_large_house", () -> {
-                    BlockPos pos = blockPos(args);
-                    return StructureBuildController.buildStructure(player, "starter_cabin_7x7", pos,
-                                    directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName())),
-                                    firstString(args, "style", "palette", "materialPreference"),
-                                    true)
+                    Direction facing = directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()));
+                    ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, args, "starter_cabin_7x7", facing, false);
+                    if (!target.resolved()) {
+                        return target.toBlockedActionResult("Look at the intended build site or stand where you want the larger shelter oriented.");
+                    }
+                    return StructureBuildController.buildStructure(player, "starter_cabin_7x7", target.position(),
+                                    facing, firstString(args, "style", "palette", "materialPreference"), true)
+                            .withObservation("target", target.toJson())
                             .withEffect("taskName", "build_large_house");
                 });
                 case "repair_structure", "repair_house", "repair_wall", "repair_door", "patch_house", "fix_house" -> withNpc(player, "repair_structure", () -> {
@@ -244,21 +239,23 @@ public final class ActionPrimitiveRegistry {
                     yield ActionResult.success("DONE", "Reported nearby Create-family/modded blocks.");
                 }
                 case "inspect_mod_block" -> {
-                    BlockPos pos = blockPos(args);
-                    if (pos == null) {
+                    ResolvedTarget target = TargetResolver.resolveBlockTarget(player, args, "inspect_mod_block", false);
+                    if (!target.resolved()) {
                         ModInteractionManager.reportNearby(player, radius(args));
-                        yield ActionResult.blocked("MISSING_POSITION", "No exact modded block position was provided; reported nearby modded blocks instead.", "Choose one reported coordinate and call inspect_mod_block again.");
+                        yield target.toBlockedActionResult("Look at the modded block or stand near one of the reported candidates.");
                     }
-                    ModInteractionManager.inspectBlock(player, pos);
-                    yield ActionResult.success("DONE", "Inspected the exact modded block.");
+                    ModInteractionManager.inspectBlock(player, target.position());
+                    yield ActionResult.success("DONE", "Inspected the resolved modded block.")
+                            .withObservation("target", target.toJson());
                 }
                 case "use_mod_wrench" -> {
-                    BlockPos pos = blockPos(args);
-                    if (pos == null) {
-                        yield ActionResult.blocked("MISSING_POSITION", "use_mod_wrench needs exact x/y/z coordinates.", "Inspect/report nearby modded blocks and ask the player to confirm a target.");
+                    ResolvedTarget target = TargetResolver.resolveBlockTarget(player, args, "use_mod_wrench", false);
+                    if (!target.resolved()) {
+                        yield target.toBlockedActionResult("Look at the Create-family block or stand close to one clear candidate.");
                     }
-                    ModInteractionManager.useWrench(player, pos);
-                    yield ActionResult.started("STARTED", "Attempted safe wrench interaction on the target block.");
+                    ModInteractionManager.useWrench(player, target.position());
+                    yield ActionResult.started("STARTED", "Attempted safe wrench interaction on the resolved target block.")
+                            .withObservation("target", target.toJson());
                 }
                 case "interact_block" -> ActionResult.blocked("INTERACT_NOT_GENERIC", "Generic interact_block is not exposed yet because mod/block semantics differ.", "Use inspect_block, inspect_mod_block, use_mod_wrench, open_container, or ask for a specific interaction.");
                 case "attack_entity" -> ActionResult.blocked("USE_GUARD_PLAYER", "Direct arbitrary attack_entity is not exposed; protection mode safely filters hostiles and never attacks players.", "Use guard_player/protect_player or ask for a safer combat policy.");
@@ -271,24 +268,60 @@ public final class ActionPrimitiveRegistry {
         }
     }
 
+    private static ActionResult structureWithTarget(ServerPlayer player, JsonObject args, String actionName) {
+        String template = firstString(args, "template", "templateId", "structure", "blueprint");
+        Direction facing = directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()));
+        ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, args, template, facing, false);
+        if (!target.resolved()) {
+            return target.toBlockedActionResult("Look at the intended site, stand near it, or choose a built-in blueprint template.");
+        }
+        String style = firstString(args, "style", "palette", "materialPreference");
+        ActionResult result = "preview_structure".equals(actionName)
+                ? StructureBuildController.previewStructure(player, template, target.position(), facing, style)
+                : StructureBuildController.buildStructure(player, template, target.position(), facing, style, boolArg(args, "autoGather", true));
+        return result.withObservation("target", target.toJson());
+    }
+
+    private static ActionResult machineWithTarget(ServerPlayer player, JsonObject args, String actionName) {
+        String machine = firstString(args, "machine", "template", "templateId", "structure");
+        Direction facing = directionFromName(firstStringFromValue(firstString(args, "forward", "direction", "facing"), player.getDirection().getName()));
+        ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, args, machine, facing, true);
+        if (!target.resolved()) {
+            return target.toBlockedActionResult("Look at the intended machine site, stand near it, or preview the exact saved machine plan.");
+        }
+        ActionResult result = switch (actionName) {
+            case "authorize_machine_plan" -> MachineBuildController.authorizeMachinePlan(player, machine, target.position(), facing);
+            case "build_machine" -> MachineBuildController.buildMachine(player, machine, target.position(), facing);
+            case "test_machine" -> MachineBuildController.testMachine(player, machine, target.position(), facing);
+            default -> MachineBuildController.previewMachine(player, machine, target.position(), facing);
+        };
+        return result.withObservation("target", target.toJson());
+    }
+
     private static ActionResult moveTo(ServerPlayer player, JsonObject args) {
         BlockPos pos = blockPos(args);
         if (pos == null) {
-            return ActionResult.blocked("MISSING_POSITION", "move_to needs exact x/y/z coordinates.", "Ask for a target position or use a skill that can derive one.");
+            ResolvedTarget target = TargetResolver.resolveBlockTarget(player, args, "move_to", false);
+            if (!target.resolved()) {
+                return target.toBlockedActionResult("Look at the destination block, say here/current location, or use a supported travel skill.");
+            }
+            pos = target.position();
         }
+        BlockPos targetPos = pos;
         return withNpc(player, "move_to", () -> {
-            NpcManager.goTo(player, pos.getX(), pos.getY(), pos.getZ());
-            return ActionResult.started("STARTED", "NPC is pathing to " + pos.toShortString() + ".");
+            NpcManager.goTo(player, targetPos.getX(), targetPos.getY(), targetPos.getZ());
+            return ActionResult.started("STARTED", "NPC is pathing to " + targetPos.toShortString() + ".");
         });
     }
 
     private static ActionResult inspectBlock(ServerPlayer player, JsonObject args) {
-        BlockPos pos = blockPos(args);
-        if (pos == null) {
-            return ActionResult.blocked("MISSING_POSITION", "inspect_block needs exact x/y/z coordinates.", "Ask for a target block position or use report_nearby first.");
+        ResolvedTarget target = TargetResolver.resolveBlockTarget(player, args, "inspect_block", false);
+        if (!target.resolved()) {
+            return target.toBlockedActionResult("Look at the block or stand closer to the target object.");
         }
-        NpcManager.inspectBlock(player, pos);
-        return ActionResult.success("DONE", "Inspected block at " + pos.toShortString() + ".");
+        NpcManager.inspectBlock(player, target.position());
+        return ActionResult.success("DONE", "Inspected block at " + target.position().toShortString() + ".")
+                .withObservation("target", target.toJson());
     }
 
     private static ActionResult craftAtTable(ServerPlayer player, JsonObject args, boolean allowContainerMaterials) {

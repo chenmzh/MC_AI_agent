@@ -107,25 +107,13 @@ public final class BridgeActions {
             case "build_redstone_template", "redstone_template" ->
                     emitActionResult(player, "build_redstone_template", SurvivalActions.buildRedstoneTemplate(player, firstNonBlank(action.value(), action.block(), action.item())), false);
             case "preview_machine" ->
-                    emitActionResult(player, "preview_machine", MachineBuildController.previewMachine(player,
-                            machineFromAction(action),
-                            action.position() == null ? null : blockPos(action.position()),
-                            buildFacing(player, action)), false);
+                    emitActionResult(player, "preview_machine", machineActionWithTarget(player, action, "preview_machine"), false);
             case "authorize_machine_plan" ->
-                    emitActionResult(player, "authorize_machine_plan", MachineBuildController.authorizeMachinePlan(player,
-                            machineFromAction(action),
-                            action.position() == null ? null : blockPos(action.position()),
-                            buildFacing(player, action)), false);
+                    emitActionResult(player, "authorize_machine_plan", machineActionWithTarget(player, action, "authorize_machine_plan"), false);
             case "build_machine" ->
-                    emitActionResult(player, "build_machine", MachineBuildController.buildMachine(player,
-                            machineFromAction(action),
-                            action.position() == null ? null : blockPos(action.position()),
-                            buildFacing(player, action)), false);
+                    emitActionResult(player, "build_machine", machineActionWithTarget(player, action, "build_machine"), false);
             case "test_machine" ->
-                    emitActionResult(player, "test_machine", MachineBuildController.testMachine(player,
-                            machineFromAction(action),
-                            action.position() == null ? null : blockPos(action.position()),
-                            buildFacing(player, action)), false);
+                    emitActionResult(player, "test_machine", machineActionWithTarget(player, action, "test_machine"), false);
             case "cancel_machine_build" ->
                     emitActionResult(player, "cancel_machine_build", MachineBuildController.cancelMachineBuild(player), false);
             case "gather_materials" ->
@@ -133,44 +121,35 @@ public final class BridgeActions {
                             firstNonBlank(action.item(), action.block(), action.value(), action.message(), "placeable_blocks"),
                             actionCount(decision, 64)), false);
             case "preview_structure" ->
-                    emitActionResult(player, "preview_structure", StructureBuildController.previewStructure(player,
-                            templateFromAction(action),
-                            action.position() == null ? null : blockPos(action.position()),
-                            buildFacing(player, action),
-                            firstNonBlank(action.style(), action.behaviorPreference(), "")), false);
+                    emitActionResult(player, "preview_structure", structureActionWithTarget(player, action, "preview_structure"), false);
             case "build_structure" ->
-                    emitActionResult(player, "build_structure", StructureBuildController.buildStructure(player,
-                            templateFromAction(action),
-                            action.position() == null ? null : blockPos(action.position()),
-                            buildFacing(player, action),
-                            firstNonBlank(action.style(), action.behaviorPreference(), ""),
-                            true), false);
+                    emitActionResult(player, "build_structure", structureActionWithTarget(player, action, "build_structure"), false);
             case "cancel_structure" ->
                     emitActionResult(player, "cancel_structure", StructureBuildController.cancelStructure(player), false);
             case "inspect_block" -> {
-                BridgeDecision.Position position = decision.action().position();
-                if (position == null) {
-                    say(player, "I need exact block coordinates before inspecting a block.");
+                ResolvedTarget target = TargetResolver.resolveBlockTarget(player, argsForTarget(action), "inspect_block", false);
+                if (!target.resolved()) {
+                    say(player, target.message());
                 } else {
-                    NpcManager.inspectBlock(player, blockPos(position));
+                    NpcManager.inspectBlock(player, target.position());
                 }
             }
             case "report_modded_nearby" -> ModInteractionManager.reportNearby(player, actionRadius(decision));
             case "inspect_mod_block" -> {
-                BridgeDecision.Position position = decision.action().position();
-                if (position == null) {
+                ResolvedTarget target = TargetResolver.resolveBlockTarget(player, argsForTarget(action), "inspect_mod_block", false);
+                if (!target.resolved()) {
                     ModInteractionManager.reportNearby(player, actionRadius(decision));
                 } else {
-                    ModInteractionManager.inspectBlock(player, blockPos(position));
+                    ModInteractionManager.inspectBlock(player, target.position());
                 }
             }
             case "create_wrench" -> PlanManager.startPlan(player, decision, true);
             case "use_mod_wrench" -> {
-                BridgeDecision.Position position = decision.action().position();
-                if (position == null) {
-                    say(player, "I need exact block coordinates before using a wrench.");
+                ResolvedTarget target = TargetResolver.resolveBlockTarget(player, argsForTarget(action), "use_mod_wrench", false);
+                if (!target.resolved()) {
+                    say(player, target.message());
                 } else {
-                    ModInteractionManager.useWrench(player, blockPos(position));
+                    ModInteractionManager.useWrench(player, target.position());
                 }
             }
             case "come", "come_to_player", "look_at_player" -> NpcManager.comeTo(player);
@@ -199,19 +178,19 @@ public final class BridgeActions {
             case "gear", "gear_status", "report_gear" -> NpcManager.gearStatus(player);
             case "list", "list_npcs", "list_npc" -> NpcManager.listNpcs(player);
             case "break_block" -> {
-                BridgeDecision.Position position = decision.action().position();
-                if (position == null) {
-                    say(player, "I need exact block coordinates before breaking a block.");
+                ResolvedTarget target = TargetResolver.resolveBlockTarget(player, argsForTarget(action), "break_block", true);
+                if (!target.resolved()) {
+                    say(player, target.message());
                 } else {
-                    NpcManager.breakBlockAt(player, blockPos(position));
+                    NpcManager.breakBlockAt(player, target.position());
                 }
             }
             case "place_block" -> {
-                BridgeDecision.Position position = decision.action().position();
-                if (position == null) {
-                    say(player, "I need exact block coordinates before placing a block.");
+                ResolvedTarget target = TargetResolver.resolvePlacementTarget(player, argsForTarget(action));
+                if (!target.resolved()) {
+                    say(player, target.message());
                 } else {
-                    NpcManager.placeBlockAt(player, blockPos(position), firstNonBlank(decision.action().block(), decision.action().item(), decision.action().value()));
+                    NpcManager.placeBlockAt(player, target.position(), firstNonBlank(decision.action().block(), decision.action().item(), decision.action().value()));
                 }
             }
             case "repair_structure", "repair_house", "repair_wall", "repair_door", "patch_house", "fix_house" -> {
@@ -228,22 +207,17 @@ public final class BridgeActions {
                 }
             }
             case "prepare_build_materials", "gather_wood", "collect_drops", "build_basic_shelter", "create_inspect" -> PlanManager.startPlan(player, decision, true);
-            case "build_basic_house" -> emitActionResult(player, "build_basic_house", StructureBuildController.buildStructure(player,
-                    "starter_cabin_7x7",
-                    action.position() == null ? null : blockPos(action.position()),
-                    buildFacing(player, action),
-                    firstNonBlank(action.style(), action.behaviorPreference(), ""),
-                    false), false);
-            case "build_large_house" -> emitActionResult(player, "build_large_house", StructureBuildController.buildStructure(player,
-                    "starter_cabin_7x7",
-                    action.position() == null ? null : blockPos(action.position()),
-                    buildFacing(player, action),
-                    firstNonBlank(action.style(), action.behaviorPreference(), ""),
-                    true), false);
+            case "build_basic_house" -> emitActionResult(player, "build_basic_house", structureActionWithTarget(player, action, "build_basic_house"), false);
+            case "build_large_house" -> emitActionResult(player, "build_large_house", structureActionWithTarget(player, action, "build_large_house"), false);
             case "goto_position" -> {
                 BridgeDecision.Position position = decision.action().position();
                 if (position == null) {
-                    say(player, "No target position was provided.");
+                    ResolvedTarget target = TargetResolver.resolveBlockTarget(player, argsForTarget(action), "goto_position", false);
+                    if (!target.resolved()) {
+                        say(player, target.message());
+                    } else {
+                        NpcManager.goTo(player, target.position().getX(), target.position().getY(), target.position().getZ());
+                    }
                 } else {
                     NpcManager.goTo(player, position.x(), position.y(), position.z());
                 }
@@ -535,6 +509,60 @@ public final class BridgeActions {
 
     private static BlockPos blockPos(BridgeDecision.Position position) {
         return BlockPos.containing(position.x(), position.y(), position.z());
+    }
+
+    private static JsonObject argsForTarget(BridgeDecision.Action action) {
+        JsonObject args = new JsonObject();
+        if (action == null) {
+            return args;
+        }
+        if (action.position() != null) {
+            JsonObject position = new JsonObject();
+            position.addProperty("x", action.position().x());
+            position.addProperty("y", action.position().y());
+            position.addProperty("z", action.position().z());
+            args.add("position", position);
+        }
+        if (action.targetSpec() != null && !action.targetSpec().isEmpty()) {
+            args.add("targetSpec", action.targetSpec().deepCopy());
+        }
+        String value = firstNonBlank(action.value(), action.block(), action.item(), action.message());
+        if (!value.isBlank()) {
+            args.addProperty("targetDescription", value);
+        }
+        return args;
+    }
+
+    private static ActionResult structureActionWithTarget(ServerPlayer player, BridgeDecision.Action action, String actionName) {
+        String template = "build_basic_house".equals(actionName) || "build_large_house".equals(actionName)
+                ? "starter_cabin_7x7"
+                : templateFromAction(action);
+        Direction facing = buildFacing(player, action);
+        ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, argsForTarget(action), template, facing, false);
+        if (!target.resolved()) {
+            return target.toBlockedActionResult("Look at the build target, stand near it, or choose a built-in template.");
+        }
+        boolean autoGather = !"build_basic_house".equals(actionName);
+        ActionResult result = "preview_structure".equals(actionName)
+                ? StructureBuildController.previewStructure(player, template, target.position(), facing, firstNonBlank(action.style(), action.behaviorPreference(), ""))
+                : StructureBuildController.buildStructure(player, template, target.position(), facing, firstNonBlank(action.style(), action.behaviorPreference(), ""), autoGather);
+        return result.withObservation("target", target.toJson());
+    }
+
+    private static ActionResult machineActionWithTarget(ServerPlayer player, BridgeDecision.Action action, String actionName) {
+        String machine = machineFromAction(action);
+        Direction facing = buildFacing(player, action);
+        ResolvedTarget target = TargetResolver.resolveBuildAnchor(player, argsForTarget(action), machine, facing, true);
+        if (!target.resolved()) {
+            return target.toBlockedActionResult("Look at the machine target site, stand near it, or preview/authorize the exact saved machine plan.");
+        }
+        ActionResult result = switch (actionName) {
+            case "authorize_machine_plan" -> MachineBuildController.authorizeMachinePlan(player, machine, target.position(), facing);
+            case "build_machine" -> MachineBuildController.buildMachine(player, machine, target.position(), facing);
+            case "test_machine" -> MachineBuildController.testMachine(player, machine, target.position(), facing);
+            default -> MachineBuildController.previewMachine(player, machine, target.position(), facing);
+        };
+        return result.withObservation("target", target.toJson());
     }
 
     private static Direction buildFacing(ServerPlayer player, BridgeDecision.Action action) {

@@ -135,6 +135,8 @@ public record BridgeContext(ServerPlayer player, String message, JsonObject payl
         context.add("structureBlueprints", BlueprintTemplateRegistry.catalogJson());
         context.add("machineTemplates", MachineBuildController.catalogJson(player));
         context.add("travelPolicy", TravelController.policyJson());
+        context.add("targetGrounding", TargetResolver.contextSnapshot(player));
+        context.add("targetResolver", TargetResolver.contractJson());
         context.add("survivalEnvironment", SurvivalEnvironment.snapshotFor(player));
         context.add("modded", ModInteractionManager.snapshotFor(player));
         JsonObject executionFeedback = TaskFeedback.snapshotJson(player, npcJson);

@@ -1,0 +1,498 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "reply": {
+      "type": ["string", "null"],
+      "description": "A short in-game chat reply. Use null if no chat reply is needed."
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "none",
+            "say",
+            "ask_clarifying_question",
+            "propose_plan",
+            "draft_blueprint",
+            "save_plan",
+            "start_plan",
+            "continue_plan",
+            "taskgraph_next",
+            "report_plan",
+            "report_plan_feedback",
+            "cancel_plan",
+            "come_to_player",
+            "follow_player",
+            "stop",
+            "look_at_player",
+            "goto_position",
+            "report_status",
+            "report_task_status",
+            "report_nearby",
+            "report_inventory",
+            "report_resources",
+            "survival_assist",
+            "till_field",
+            "plant_crop",
+            "harvest_crops",
+            "hunt_food_animal",
+            "feed_animal",
+            "breed_animals",
+            "tame_animal",
+            "build_redstone_template",
+            "preview_machine",
+            "authorize_machine_plan",
+            "build_machine",
+            "test_machine",
+            "cancel_machine_build",
+            "gather_materials",
+            "preview_structure",
+            "build_structure",
+            "cancel_structure",
+            "report_crafting",
+            "report_containers",
+            "deposit_to_chest",
+            "deposit_item_to_chest",
+            "withdraw_from_chest",
+            "take_from_chest",
+            "approve_chest_materials",
+            "revoke_chest_materials",
+            "inspect_block",
+            "report_modded_nearby",
+            "inspect_mod_block",
+            "use_mod_wrench",
+            "prepare_basic_tools",
+            "prepare_axe",
+            "prepare_pickaxe",
+            "craft_item",
+            "craft_at_table",
+            "craft_from_chest_at_table",
+            "equip_best_gear",
+            "collect_items",
+            "mine_nearby_ore",
+            "gather_stone",
+            "harvest_logs",
+            "salvage_nearby_wood_structure",
+            "break_block",
+            "place_block",
+            "build_basic_house",
+            "build_large_house",
+            "repair_structure",
+            "set_home",
+            "go_home",
+            "guard_player",
+            "protect_player",
+            "stop_guard",
+            "patrol_start",
+            "patrol_stop",
+            "remember",
+            "recall"
+          ]
+        },
+        "player": {
+          "type": ["string", "null"],
+          "description": "Target player name for player-targeted actions."
+        },
+        "message": {
+          "type": ["string", "null"],
+          "description": "Message for the say action."
+        },
+        "position": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "x": { "type": "number" },
+                "y": { "type": "number" },
+                "z": { "type": "number" }
+              },
+              "required": ["x", "y", "z"]
+            },
+            { "type": "null" }
+          ]
+        },
+        "targetSpec": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": ["string", "null"],
+                  "enum": [null, "current_position", "looking_at", "near_player", "inside_current_structure", "known_place", "resource_hint", "explicit_position"],
+                  "description": "Natural world target source for player references like here, this block, what I am looking at, nearby, or the structure I am standing in."
+                },
+                "kind": {
+                  "type": ["string", "null"],
+                  "description": "Target kind such as block, placement, structure, build_anchor, machine_anchor, container, modded_block, resource, or animal."
+                },
+                "description": {
+                  "type": ["string", "null"],
+                  "description": "Short natural-language target phrase from the user."
+                },
+                "selector": {
+                  "type": ["string", "null"],
+                  "description": "Optional named place/object selector when the player refers to a remembered or named target."
+                },
+                "resourceCategory": {
+                  "type": ["string", "null"],
+                  "description": "Optional resource category for resource_hint targets."
+                },
+                "radius": {
+                  "type": ["number", "null"],
+                  "description": "Optional bounded search radius for near_player/current_structure resolution."
+                },
+                "position": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "x": { "type": "number" },
+                        "y": { "type": "number" },
+                        "z": { "type": "number" }
+                      },
+                      "required": ["x", "y", "z"]
+                    },
+                    { "type": "null" }
+                  ]
+                }
+              },
+              "required": ["source", "kind", "description", "selector", "resourceCategory", "radius", "position"]
+            },
+            { "type": "null" }
+          ],
+          "description": "Natural target grounding. Use this before asking for coordinates when the player says here/this/nearby/the house I am standing in."
+        },
+        "range": {
+          "type": ["number", "null"],
+          "description": "Optional distance or goal range."
+        },
+        "radius": {
+          "type": ["number", "null"],
+          "description": "Optional scan radius in blocks."
+        },
+        "durationSeconds": {
+          "type": ["number", "null"],
+          "description": "Optional bounded task duration in seconds. Use for follow-while-search tasks."
+        },
+        "key": {
+          "type": ["string", "null"],
+          "description": "Memory key for remember or recall, or an optional plan goal for plan actions."
+        },
+        "value": {
+          "type": ["string", "null"],
+          "description": "Memory value for remember, a structure template id such as starter_cabin_7x7/bridge_3w/watchtower_5x5, a machine template id such as mob_drop_tower_v1/iron_farm_v1/villager_breeder_v1/trading_hall_v1/pressure_door/simple_lamp_switch, or a supported plan goal such as gather_wood, build_basic_shelter, create_inspect, or create_wrench. For draft_blueprint/save_plan, prefer the closest supported goal and keep high-risk Create/Aeronautics work as inspect/propose/ask only."
+        },
+        "profileId": {
+          "type": ["string", "null"],
+          "description": "Optional target NPC profile id/name when the player addresses a specific NPC/persona."
+        },
+        "targetScope": {
+          "type": ["string", "null"],
+          "enum": [null, "active", "single", "all", "clarify"],
+          "description": "Natural-language NPC cooperation scope: active, single named NPC, all spawned NPCs, clarify, or null."
+        },
+        "npcName": {
+          "type": ["string", "null"],
+          "description": "Optional new NPC display name for profile/persona updates."
+        },
+        "personality": {
+          "type": ["string", "null"],
+          "description": "Optional personality text for profile/persona updates."
+        },
+        "style": {
+          "type": ["string", "null"],
+          "description": "Optional speaking/action style for profile/persona updates."
+        },
+        "defaultRole": {
+          "type": ["string", "null"],
+          "description": "Optional default NPC role for profile/persona updates."
+        },
+        "behaviorPreference": {
+          "type": ["string", "null"],
+          "description": "Optional behavior/style preference for profile/persona updates."
+        },
+        "item": {
+          "type": ["string", "null"],
+          "description": "Optional item target for craft_item, craft_at_table, craft_from_chest_at_table, withdraw_from_chest, deposit_item_to_chest, or item-specific actions."
+        },
+        "block": {
+          "type": ["string", "null"],
+          "description": "Optional block target/preference for place_block, or template/material hint for build_structure/build_machine/gather_materials when value/item is not used."
+        },
+        "count": {
+          "type": ["number", "null"],
+          "description": "Optional item/block count for crafting or container transfer actions."
+        }
+      },
+      "required": ["name", "player", "message", "position", "targetSpec", "range", "radius", "durationSeconds", "key", "value", "profileId", "targetScope", "npcName", "personality", "style", "defaultRole", "behaviorPreference", "item", "block", "count"]
+    },
+    "goalSpec": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "intent": {
+              "type": ["string", "null"],
+              "description": "Canonical goal intent, such as gather_materials, build_structure, protect_player, explore_bounded, craft_item, inspect_modded, or general_task."
+            },
+            "successCriteria": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Observable criteria that would make the task complete."
+            },
+            "constraints": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "location": { "type": ["string", "null"] },
+                "material": { "type": ["string", "null"] },
+                "size": { "type": ["string", "null"] },
+                "style": { "type": ["string", "null"] },
+                "timeBudget": { "type": ["string", "null"] },
+                "searchRadius": { "type": ["number", "null"] },
+                "safety": { "type": ["string", "null"] },
+                "notes": { "type": ["string", "null"] }
+              },
+              "required": ["location", "material", "size", "style", "timeBudget", "searchRadius", "safety", "notes"],
+              "description": "Important constraints such as location, material, size, time budget, style, safety, search radius, or notes."
+            },
+            "permissions": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "useChestMaterials": { "type": ["boolean", "null"] },
+                "destructiveBlocks": { "type": ["boolean", "null"] },
+                "combatRisk": { "type": ["boolean", "null"] },
+                "longRangeExplore": { "type": ["boolean", "null"] },
+                "moddedMachineOperation": { "type": ["boolean", "null"] },
+                "notes": { "type": ["string", "null"] }
+              },
+              "required": ["useChestMaterials", "destructiveBlocks", "combatRisk", "longRangeExplore", "moddedMachineOperation", "notes"],
+              "description": "Permission flags such as useChestMaterials, destructiveBlocks, combatRisk, longRangeExplore, or moddedMachineOperation."
+            },
+            "participants": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "targetScope": {
+                  "type": ["string", "null"],
+                  "enum": [null, "active", "single", "all", "clarify"]
+                },
+                "targetNpc": { "type": ["string", "null"] },
+                "player": { "type": ["string", "null"] },
+                "teamMode": { "type": ["string", "null"] },
+                "roles": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "notes": { "type": ["string", "null"] }
+              },
+              "required": ["targetScope", "targetNpc", "player", "teamMode", "roles", "notes"],
+              "description": "NPC/player participation hints, including targetScope, targetNpc, or team roles."
+            },
+            "priority": {
+              "type": "number",
+              "description": "1-10 priority, where 10 is urgent safety."
+            },
+            "clarificationNeeded": {
+              "type": "boolean",
+              "description": "True when key details or permissions are missing."
+            },
+            "clarificationQuestion": {
+              "type": ["string", "null"],
+              "description": "One concise question to ask the player when clarificationNeeded is true."
+            },
+            "rawRequest": {
+              "type": ["string", "null"],
+              "description": "Original player request or the closest compact restatement."
+            }
+          },
+          "required": ["intent", "successCriteria", "constraints", "permissions", "participants", "priority", "clarificationNeeded", "clarificationQuestion", "rawRequest"]
+        },
+        { "type": "null" }
+      ]
+    },
+    "actionCall": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": ["string", "null"],
+              "description": "Registered primitive name from context.actionPrimitives or context.observationFrame.availableActions."
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "position": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "x": { "type": "number" },
+                        "y": { "type": "number" },
+                        "z": { "type": "number" }
+                      },
+                      "required": ["x", "y", "z"]
+                    },
+                    { "type": "null" }
+                  ]
+                },
+                "targetSpec": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "source": {
+                          "type": ["string", "null"],
+                          "enum": [null, "current_position", "looking_at", "near_player", "inside_current_structure", "known_place", "resource_hint", "explicit_position"]
+                        },
+                        "kind": { "type": ["string", "null"] },
+                        "description": { "type": ["string", "null"] },
+                        "selector": { "type": ["string", "null"] },
+                        "resourceCategory": { "type": ["string", "null"] },
+                        "radius": { "type": ["number", "null"] },
+                        "position": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "x": { "type": "number" },
+                                "y": { "type": "number" },
+                                "z": { "type": "number" }
+                              },
+                              "required": ["x", "y", "z"]
+                            },
+                            { "type": "null" }
+                          ]
+                        }
+                      },
+                      "required": ["source", "kind", "description", "selector", "resourceCategory", "radius", "position"]
+                    },
+                    { "type": "null" }
+                  ],
+                  "description": "Natural target grounding for primitive ActionCall args."
+                },
+                "x": {
+                  "type": ["number", "null"],
+                  "description": "Optional x coordinate when the primitive contract uses flat coordinates instead of position."
+                },
+                "y": {
+                  "type": ["number", "null"],
+                  "description": "Optional y coordinate when the primitive contract uses flat coordinates instead of position."
+                },
+                "z": {
+                  "type": ["number", "null"],
+                  "description": "Optional z coordinate when the primitive contract uses flat coordinates instead of position."
+                },
+                "radius": { "type": ["number", "null"] },
+                "range": { "type": ["number", "null"] },
+                "durationSeconds": { "type": ["number", "null"] },
+                "item": { "type": ["string", "null"] },
+                "block": { "type": ["string", "null"] },
+                "template": { "type": ["string", "null"] },
+                "templateId": { "type": ["string", "null"] },
+                "structure": { "type": ["string", "null"] },
+                "blueprint": { "type": ["string", "null"] },
+                "material": { "type": ["string", "null"] },
+                "category": { "type": ["string", "null"] },
+                "style": { "type": ["string", "null"] },
+                "palette": { "type": ["string", "null"] },
+                "materialPreference": { "type": ["string", "null"] },
+                "facing": { "type": ["string", "null"] },
+                "direction": { "type": ["string", "null"] },
+                "autoGather": { "type": ["boolean", "null"] },
+                "count": { "type": ["number", "null"] },
+                "message": { "type": ["string", "null"] },
+                "key": { "type": ["string", "null"] },
+                "value": { "type": ["string", "null"] },
+                "player": { "type": ["string", "null"] },
+                "profileId": { "type": ["string", "null"] }
+              },
+              "required": ["position", "targetSpec", "x", "y", "z", "radius", "range", "durationSeconds", "item", "block", "template", "templateId", "structure", "blueprint", "material", "category", "style", "palette", "materialPreference", "facing", "direction", "autoGather", "count", "message", "key", "value", "player", "profileId"],
+              "description": "Primitive arguments such as position, x/y/z, radius, durationSeconds, item, block, material/category, template/blueprint, style/palette, facing/direction, autoGather, or count."
+            },
+            "targetNpc": {
+              "type": ["string", "null"],
+              "description": "Optional NPC profile/name for the action call."
+            },
+            "scope": {
+              "type": ["string", "null"],
+              "enum": [null, "active", "single", "all", "clarify"],
+              "description": "NPC target scope for the action call."
+            },
+            "reason": {
+              "type": ["string", "null"],
+              "description": "Why this primitive is the next step."
+            },
+            "expectedEffect": {
+              "type": ["string", "null"],
+              "description": "Observable expected effect for verifier/feedback."
+            },
+            "safetyLevel": {
+              "type": ["string", "null"],
+              "enum": [null, "safe", "normal", "destructive", "combat", "permissioned"],
+              "description": "Safety class from the SkillSpec."
+            }
+          },
+          "required": ["name", "args", "targetNpc", "scope", "reason", "expectedEffect", "safetyLevel"]
+        },
+        { "type": "null" }
+      ]
+    },
+    "taskGraph": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "goal": { "type": ["string", "null"] },
+            "status": {
+              "type": ["string", "null"],
+              "description": "draft, ready, running, blocked, done, or needs_clarification."
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": ["string", "null"] },
+                  "skill": { "type": ["string", "null"] },
+                  "action": { "type": ["string", "null"] },
+                  "status": { "type": ["string", "null"] },
+                  "dependsOn": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "repairFor": { "type": ["string", "null"] }
+                },
+                "required": ["id", "skill", "action", "status", "dependsOn", "repairFor"]
+              }
+            },
+            "currentNodeId": { "type": ["string", "null"] },
+            "summary": { "type": ["string", "null"] }
+          },
+          "required": ["id", "goal", "status", "nodes", "currentNodeId", "summary"]
+        },
+        { "type": "null" }
+      ]
+    }
+  },
+  "required": ["reply", "action", "goalSpec", "actionCall", "taskGraph"]
+}

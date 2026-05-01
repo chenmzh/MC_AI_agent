@@ -33,6 +33,7 @@ public record BridgeDecision(String reply, Action action, GoalSpec goalSpec, Act
                 firstString(actionJson, "item", "itemName", "targetItem"),
                 firstString(actionJson, "block", "blockName", "targetBlock"),
                 firstString(actionJson, "targetScope", "scope", "teamScope"),
+                objectOrNull(actionJson.get("targetSpec")),
                 numberOrNull(actionJson.get("count"))
         );
         String rawRequest = firstNonBlank(action.message(), action.value(), action.key(), reply, "");
@@ -118,6 +119,7 @@ public record BridgeDecision(String reply, Action action, GoalSpec goalSpec, Act
             String item,
             String block,
             String targetScope,
+            JsonObject targetSpec,
             Double count
     ) {
     }

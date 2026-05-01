@@ -27,6 +27,7 @@ public final class ObservationFrame {
         perception.add("nearbyBlocks", AgentJson.array(context, "nearbyBlocks"));
         perception.add("nearbyContainers", AgentJson.array(context, "nearbyContainers"));
         perception.add("objects", copy(context, "objects"));
+        perception.add("targetGrounding", copy(context, "targetGrounding"));
         perception.add("survivalEnvironment", copy(context, "survivalEnvironment"));
         perception.add("modded", copy(context, "modded"));
         perception.add("currentObservation", copy(worldKnowledge, "currentObservation"));
@@ -70,9 +71,12 @@ public final class ObservationFrame {
         policies.addProperty("boundedExplorationOnly", true);
         policies.addProperty("worldChangingActionsRequireWhitelistedAction", true);
         policies.addProperty("complexTasksMustBePauseableRecoverableExplainable", true);
+        policies.addProperty("naturalTargetReferencesUseTargetSpecFirst", true);
+        policies.addProperty("coordinatesAreFallbackOrDebugOnly", true);
         frame.add("policies", policies);
 
         frame.add("capabilities", copy(context, "capabilities"));
+        frame.add("targetResolver", copy(context, "targetResolver"));
         frame.add("social", copy(context, "social"));
         frame.add("relationship", copy(context, "relationship"));
         frame.add("companion", copy(context, "companion"));
