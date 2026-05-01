@@ -94,6 +94,7 @@ public final class NpcManager {
     private static final double KNOWN_RESOURCE_TRAVEL_MAX_DISTANCE = TravelController.KNOWN_RESOURCE_MAX_DISTANCE;
     private static final int KNOWN_RESOURCE_MAX_AGE_TICKS = 20 * 60 * 30;
     private static final int KNOWN_RESOURCE_TRAVEL_TIMEOUT_TICKS = 20 * 90;
+    private static final int KNOWN_RESOURCE_BLOCKED_TICKS = 20 * 90;
     private static final int HARVEST_SCOUT_RADIUS = TravelController.SCOUT_RING_MAX_RADIUS;
     private static final int HARVEST_SCOUT_LEG_TICKS = 20 * 5;
     private static final int NAVIGATION_STUCK_RETRY_TICKS = 80;
@@ -178,6 +179,8 @@ public final class NpcManager {
     private static BlockPos taskScoutTarget;
     private static int taskScoutLegTicks;
     private static int taskScoutLegIndex;
+    private static BlockPos temporarilyBlockedKnownResourceTarget;
+    private static int temporarilyBlockedKnownResourceTicks;
     private static UUID chestMaterialApprovalOwnerUuid;
 
     private enum BasicCraftTarget {
@@ -2170,6 +2173,7 @@ public final class NpcManager {
         mobility.addProperty("maxRepairAttempts", MOBILITY_REPAIR_MAX_ATTEMPTS);
         mobility.addProperty("temporarilyBlockedStandPos", temporarilyBlockedStandPos == null ? "" : positionText(temporarilyBlockedStandPos));
         mobility.addProperty("temporarilyBlockedBreakTarget", temporarilyBlockedBreakTarget == null ? "" : positionText(temporarilyBlockedBreakTarget));
+        mobility.addProperty("temporarilyBlockedKnownResourceTarget", temporarilyBlockedKnownResourceTarget == null ? "" : positionText(temporarilyBlockedKnownResourceTarget));
         mobility.addProperty("policy", "bounded bridge/step recovery using NPC storage or approved nearby containers; reports blockers instead of silently spinning");
         npcJson.add("mobility", mobility);
         JsonObject autonomy = new JsonObject();
@@ -4057,8 +4061,9 @@ public final class NpcManager {
                     KNOWN_RESOURCE_TRAVEL_MAX_DISTANCE,
                     KNOWN_RESOURCE_MAX_AGE_TICKS
             );
-            if (hint != null && npc.distanceToSqr(hint.blockPos().getX() + 0.5D, hint.blockPos().getY() + 0.5D, hint.blockPos().getZ() + 0.5D) > 64.0D) {
-                taskKnownResourceTarget = hint.blockPos();
+            if (hint != null && !isTemporarilyBlockedKnownResourceTarget(hint.blockPos())
+                    && npc.distanceToSqr(hint.blockPos().getX() + 0.5D, hint.blockPos().getY() + 0.5D, hint.blockPos().getZ() + 0.5D) > 64.0D) {
+                taskKnownResourceTarget = hint.blockPos().immutable();
                 taskKnownResourceTravelTicks = 0;
                 taskScoutTarget = null;
                 String message = "I remember " + hint.block() + " near "
@@ -4079,6 +4084,10 @@ public final class NpcManager {
                 taskKnownResourceTarget.getZ() + 0.5D
         );
         if (distanceSqr <= Math.max(36.0D, taskRadius * taskRadius * 0.25D)) {
+            TaskFeedback.warn(owner, npc, taskName(), "KNOWN_RESOURCE_AREA_EXHAUSTED",
+                    "Reached remembered log area near " + positionText(taskKnownResourceTarget)
+                            + ", but no reachable logs were selected; I will ignore that hint briefly and scout locally.");
+            markKnownResourceTargetBlocked(taskKnownResourceTarget);
             taskKnownResourceTarget = null;
             taskKnownResourceTravelTicks = 0;
             resetNavigationProgress();
@@ -4091,6 +4100,28 @@ public final class NpcManager {
                     + positionText(taskKnownResourceTarget)
                     + "; I will fall back to local scouting.";
             TaskFeedback.warn(owner, npc, taskName(), "KNOWN_RESOURCE_UNREACHABLE", message);
+            markKnownResourceTargetBlocked(taskKnownResourceTarget);
+            taskKnownResourceTarget = null;
+            taskKnownResourceTravelTicks = 0;
+            resetNavigationProgress();
+            return false;
+        }
+
+        if (!taskKnownResourceTarget.equals(navigationTarget)) {
+            resetNavigationProgress();
+            navigationTarget = taskKnownResourceTarget;
+        }
+        if (distanceSqr + NAVIGATION_STUCK_MIN_PROGRESS_SQR < lastNavigationDistanceSqr) {
+            navigationStuckTicks = 0;
+            lastNavigationDistanceSqr = distanceSqr;
+        } else if (distanceSqr > NAVIGATION_CLOSE_ENOUGH_SQR) {
+            navigationStuckTicks += 5;
+        }
+        if (navigationStuckTicks >= NAVIGATION_STUCK_RETRY_TICKS && distanceSqr > NAVIGATION_CLOSE_ENOUGH_SQR) {
+            String message = "Pathing to remembered tree location " + positionText(taskKnownResourceTarget)
+                    + " is not making progress; I will ignore that hint briefly and scout locally.";
+            TaskFeedback.warn(owner, npc, taskName(), "KNOWN_RESOURCE_PATH_STUCK", message);
+            markKnownResourceTargetBlocked(taskKnownResourceTarget);
             taskKnownResourceTarget = null;
             taskKnownResourceTravelTicks = 0;
             resetNavigationProgress();
@@ -4098,13 +4129,22 @@ public final class NpcManager {
         }
 
         if (tickCounter % 20 == 0 || npc.getNavigation().isDone()) {
-            navigationTarget = taskKnownResourceTarget;
-            npc.getNavigation().moveTo(
+            boolean started = npc.getNavigation().moveTo(
                     taskKnownResourceTarget.getX() + 0.5D,
                     taskKnownResourceTarget.getY(),
                     taskKnownResourceTarget.getZ() + 0.5D,
                     McAiConfig.NPC_MOVE_SPEED.get()
             );
+            if (!started && distanceSqr > NAVIGATION_CLOSE_ENOUGH_SQR) {
+                String message = "Navigation could not start toward remembered tree location "
+                        + positionText(taskKnownResourceTarget) + "; I will scout locally instead.";
+                TaskFeedback.warn(owner, npc, taskName(), "KNOWN_RESOURCE_NO_PATH", message);
+                markKnownResourceTargetBlocked(taskKnownResourceTarget);
+                taskKnownResourceTarget = null;
+                taskKnownResourceTravelTicks = 0;
+                resetNavigationProgress();
+                return false;
+            }
         }
         return true;
     }
@@ -5735,6 +5775,8 @@ public final class NpcManager {
         taskScoutTarget = null;
         taskScoutLegTicks = 0;
         taskScoutLegIndex = 0;
+        temporarilyBlockedKnownResourceTarget = null;
+        temporarilyBlockedKnownResourceTicks = 0;
     }
 
     private static void markStandPosBlocked(BlockPos standPos) {
@@ -5750,6 +5792,14 @@ public final class NpcManager {
         temporarilyBlockedBreakTargetTicks = NAVIGATION_BLOCKED_TARGET_TICKS;
     }
 
+    private static void markKnownResourceTargetBlocked(BlockPos target) {
+        if (target == null) {
+            return;
+        }
+        temporarilyBlockedKnownResourceTarget = target.immutable();
+        temporarilyBlockedKnownResourceTicks = KNOWN_RESOURCE_BLOCKED_TICKS;
+    }
+
     private static boolean isTemporarilyBlockedStandPos(BlockPos pos) {
         return temporarilyBlockedStandPos != null
                 && temporarilyBlockedStandPosTicks > 0
@@ -5760,6 +5810,17 @@ public final class NpcManager {
         return temporarilyBlockedBreakTarget != null
                 && temporarilyBlockedBreakTargetTicks > 0
                 && temporarilyBlockedBreakTarget.equals(pos);
+    }
+
+    private static boolean isTemporarilyBlockedKnownResourceTarget(BlockPos pos) {
+        if (temporarilyBlockedKnownResourceTarget == null || temporarilyBlockedKnownResourceTicks <= 0 || pos == null) {
+            return false;
+        }
+        int dx = temporarilyBlockedKnownResourceTarget.getX() - pos.getX();
+        int dy = temporarilyBlockedKnownResourceTarget.getY() - pos.getY();
+        int dz = temporarilyBlockedKnownResourceTarget.getZ() - pos.getZ();
+        return temporarilyBlockedKnownResourceTarget != null
+                && dx * dx + dy * dy + dz * dz <= 64;
     }
 
     private static void tickTemporaryNavigationBlocks() {
@@ -5778,6 +5839,15 @@ public final class NpcManager {
             temporarilyBlockedBreakTargetTicks = Math.max(0, temporarilyBlockedBreakTargetTicks - 5);
             if (temporarilyBlockedBreakTargetTicks == 0) {
                 temporarilyBlockedBreakTarget = null;
+            }
+        }
+
+        if (temporarilyBlockedKnownResourceTicks <= 0) {
+            temporarilyBlockedKnownResourceTarget = null;
+        } else {
+            temporarilyBlockedKnownResourceTicks = Math.max(0, temporarilyBlockedKnownResourceTicks - 5);
+            if (temporarilyBlockedKnownResourceTicks == 0) {
+                temporarilyBlockedKnownResourceTarget = null;
             }
         }
     }
