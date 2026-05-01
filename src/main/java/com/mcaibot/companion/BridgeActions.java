@@ -185,6 +185,8 @@ public final class BridgeActions {
             case "gather_stone", "mine_stone", "gather_cobblestone", "collect_cobblestone" ->
                     NpcManager.gatherStone(player, actionRadius(decision), actionCount(decision, 3));
             case "wood", "harvest_logs" -> NpcManager.harvestLogs(player, actionRadius(decision), actionDurationSeconds(decision));
+            case "salvage_nearby_wood_structure", "salvage_wood_structure", "reclaim_wood_structure", "demolish_wood_structure" ->
+                    NpcManager.salvageNearbyWoodStructure(player, actionRadius(decision), actionCount(decision, McAiConfig.NPC_MAX_TASK_STEPS.get()));
             case "prepare_basic_tools" -> NpcManager.prepareBasicTools(player, true, true);
             case "prepare_axe" -> NpcManager.prepareBasicTools(player, true, false);
             case "prepare_pickaxe" -> NpcManager.prepareBasicTools(player, false, true);
@@ -387,6 +389,7 @@ public final class BridgeActions {
             case "equip_best", "equip_best_gear", "auto_equip" -> "equip_best_gear";
             case "collect", "collect_items", "collect_drops" -> "collect_items";
             case "wood", "harvest_logs", "gather_wood" -> "harvest_logs";
+            case "salvage_nearby_wood_structure", "salvage_wood_structure", "reclaim_wood_structure", "demolish_wood_structure" -> "salvage_nearby_wood_structure";
             case "mine", "mine_ore", "mine_nearby_ore" -> "mine_nearby_ore";
             case "stone", "gather_stone", "mine_stone", "gather_cobblestone", "collect_cobblestone" -> "gather_stone";
             default -> "";

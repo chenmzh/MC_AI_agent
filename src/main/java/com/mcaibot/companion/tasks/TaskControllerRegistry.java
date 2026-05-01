@@ -49,6 +49,18 @@ public final class TaskControllerRegistry {
                 List.of("raw_logs", "dropped_items", "tool_durability_used")
         ));
         register(controllers, metadata(
+                "salvage_nearby_wood_structure",
+                false,
+                true,
+                "Reclaims wooden structural blocks around the player's current position through the legacy NpcManager timed block-breaking task.",
+                List.of("active_npc", "owner_online_same_dimension", "player_near_target_structure", "usable_or_craftable_axe", "explicit_destructive_request"),
+                List.of("axe_durability", "npc_storage_free_slot_or_container_space"),
+                List.of("npc_runtime", "npc_navigation", "npc_inventory", "nearby_wooden_structure_blocks"),
+                List.of("timed_block_breaking", "tool_required", "bounded_radius", "skips_block_entities", "does_not_use_player_inventory"),
+                targetScopePolicy(true, true, false, true, "owner_current_position_structure_anchor"),
+                List.of("wooden_structure_blocks_removed", "dropped_items_collection_may_start", "tool_durability_used")
+        ));
+        register(controllers, metadata(
                 "mine_nearby_ore",
                 false,
                 true,

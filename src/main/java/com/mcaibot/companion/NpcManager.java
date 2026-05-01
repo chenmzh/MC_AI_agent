@@ -403,6 +403,12 @@ public final class NpcManager {
                 "Harvesting logs near you. If no logs are close, I will follow you and keep scanning for up to " + clampedSeconds + " seconds.");
     }
 
+    public static void salvageNearbyWoodStructure(ServerPlayer player, int radius, int targetCount) {
+        int count = clamp(targetCount <= 0 ? McAiConfig.NPC_MAX_TASK_STEPS.get() : targetCount, 1, McAiConfig.NPC_MAX_TASK_STEPS.get());
+        startTask(player, TaskKind.SALVAGE_WOOD_STRUCTURE, radius, 0, count,
+                "Reclaiming wooden structure blocks around your current position. I will skip block entities such as chests and stop after a bounded batch.");
+    }
+
     public static void group(ServerPlayer player, String actionName) {
         group(player, actionName, McAiConfig.NPC_TASK_RADIUS.get(), DEFAULT_HARVEST_FOLLOW_SECONDS);
     }
@@ -2790,7 +2796,7 @@ public final class NpcManager {
     private static ToolSummary.ToolKind preferredMainHandKind() {
         return switch (taskKind) {
             case MINE_ORES, GATHER_STONE -> ToolSummary.ToolKind.PICKAXE;
-            case HARVEST_LOGS -> ToolSummary.ToolKind.AXE;
+            case HARVEST_LOGS, SALVAGE_WOOD_STRUCTURE -> ToolSummary.ToolKind.AXE;
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE, REPAIR_STRUCTURE, CRAFT_AT_TABLE, BREAK_BLOCK, PLACE_BLOCK, COLLECT_ITEMS, NONE -> ToolSummary.ToolKind.WEAPON;
         };
     }
@@ -3196,6 +3202,7 @@ public final class NpcManager {
             case MINE_ORES -> handleBlockTask(owner, npc, TaskKind.MINE_ORES);
             case GATHER_STONE -> handleBlockTask(owner, npc, TaskKind.GATHER_STONE);
             case HARVEST_LOGS -> handleBlockTask(owner, npc, TaskKind.HARVEST_LOGS);
+            case SALVAGE_WOOD_STRUCTURE -> handleBlockTask(owner, npc, TaskKind.SALVAGE_WOOD_STRUCTURE);
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE -> handleBuildHouse(owner, npc);
             case REPAIR_STRUCTURE -> handleRepairStructure(owner, npc);
             case CRAFT_AT_TABLE -> handleCraftAtTable(owner, npc);
@@ -3486,6 +3493,12 @@ public final class NpcManager {
                 if (kind == TaskKind.HARVEST_LOGS && continuePendingBuildAfterGather(owner, npc)) {
                     return;
                 }
+                if (kind == TaskKind.SALVAGE_WOOD_STRUCTURE) {
+                    int collectRadius = taskRadius <= 0 ? McAiConfig.NPC_TASK_RADIUS.get() : taskRadius;
+                    clearTask();
+                    collectItems(owner, collectRadius);
+                    return;
+                }
                 clearTask();
             }
         }
@@ -3496,6 +3509,7 @@ public final class NpcManager {
             case MINE_ORES -> "No exposed ore blocks found nearby.";
             case GATHER_STONE -> "No reachable stone/cobblestone-like blocks found nearby.";
             case HARVEST_LOGS -> "No exposed logs found nearby.";
+            case SALVAGE_WOOD_STRUCTURE -> "No reachable wooden structure blocks found near your current position.";
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE, REPAIR_STRUCTURE, CRAFT_AT_TABLE, BREAK_BLOCK, PLACE_BLOCK, COLLECT_ITEMS, NONE -> "No reachable break target found nearby.";
         };
     }
@@ -4010,6 +4024,15 @@ public final class NpcManager {
                     "AXE_AVAILABLE",
                     "NEED_AXE",
                     "Log harvesting will not start without a usable axe."
+            );
+            case SALVAGE_WOOD_STRUCTURE -> ToolSummary.recordAvailabilityFeedback(
+                    player,
+                    npc,
+                    taskName(),
+                    ToolSummary.ToolKind.AXE,
+                    "AXE_AVAILABLE",
+                    "NEED_AXE",
+                    "Wooden structure salvage will not start without a usable axe."
             );
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE, CRAFT_AT_TABLE, BREAK_BLOCK, PLACE_BLOCK, COLLECT_ITEMS, NONE -> {
             }
@@ -5168,8 +5191,53 @@ public final class NpcManager {
             case MINE_ORES -> isOre(state);
             case GATHER_STONE -> isStoneGatherTarget(state);
             case HARVEST_LOGS -> state.is(BlockTags.LOGS);
+            case SALVAGE_WOOD_STRUCTURE -> isWoodenStructureSalvageTarget(level, pos, state);
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE, REPAIR_STRUCTURE, CRAFT_AT_TABLE, BREAK_BLOCK, PLACE_BLOCK, COLLECT_ITEMS, NONE -> false;
         };
+    }
+
+    private static boolean isWoodenStructureSalvageTarget(ServerLevel level, BlockPos pos, BlockState state) {
+        if (state.hasBlockEntity()) {
+            return false;
+        }
+        String id = blockName(state);
+        boolean structuralWood = state.is(BlockTags.PLANKS)
+                || id.contains("_planks")
+                || id.contains("_stairs")
+                || id.contains("_slab")
+                || id.contains("_fence")
+                || id.contains("_fence_gate")
+                || id.contains("_door")
+                || id.contains("_trapdoor")
+                || id.contains("_sign")
+                || id.contains("_hanging_sign");
+        if (structuralWood) {
+            return true;
+        }
+        if (!state.is(BlockTags.LOGS)) {
+            return false;
+        }
+
+        for (Direction direction : Direction.values()) {
+            BlockState neighbor = level.getBlockState(pos.relative(direction));
+            if (neighbor.hasBlockEntity()) {
+                continue;
+            }
+            String neighborId = blockName(neighbor);
+            if (neighbor.is(BlockTags.PLANKS)
+                    || neighborId.contains("_planks")
+                    || neighborId.contains("_stairs")
+                    || neighborId.contains("_slab")
+                    || neighborId.contains("_fence")
+                    || neighborId.contains("_fence_gate")
+                    || neighborId.contains("_door")
+                    || neighborId.contains("_trapdoor")
+                    || neighborId.contains("_sign")
+                    || neighborId.contains("_hanging_sign")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isOre(BlockState state) {
@@ -5681,6 +5749,7 @@ public final class NpcManager {
         return switch (task) {
             case MINE_ORES, GATHER_STONE -> stack.is(ItemTags.PICKAXES) && stack.isCorrectToolForDrops(state);
             case HARVEST_LOGS -> state.is(BlockTags.LOGS) && stack.is(ItemTags.AXES);
+            case SALVAGE_WOOD_STRUCTURE -> stack.is(ItemTags.AXES);
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE, REPAIR_STRUCTURE, CRAFT_AT_TABLE, BREAK_BLOCK, PLACE_BLOCK, COLLECT_ITEMS, NONE -> false;
         };
     }
@@ -5699,7 +5768,7 @@ public final class NpcManager {
     private static ToolSummary.ToolKind requiredTool(TaskKind kind) {
         return switch (kind) {
             case MINE_ORES, GATHER_STONE -> ToolSummary.ToolKind.PICKAXE;
-            case HARVEST_LOGS -> ToolSummary.ToolKind.AXE;
+            case HARVEST_LOGS, SALVAGE_WOOD_STRUCTURE -> ToolSummary.ToolKind.AXE;
             case BUILD_BASIC_HOUSE, BUILD_LARGE_HOUSE, REPAIR_STRUCTURE, CRAFT_AT_TABLE, BREAK_BLOCK, PLACE_BLOCK, COLLECT_ITEMS, NONE -> null;
         };
     }
@@ -6037,6 +6106,12 @@ public final class NpcManager {
                 TaskFeedback.warn(owner, npc, "repair_structure", "REPAIR_GATHERING_WOOD_NO_LOGS", pendingMessage);
                 clearPendingRepair();
             }
+            if (taskKind == TaskKind.SALVAGE_WOOD_STRUCTURE && taskStepsDone > 0) {
+                int collectRadius = taskRadius <= 0 ? McAiConfig.NPC_TASK_RADIUS.get() : taskRadius;
+                clearTask();
+                collectItems(owner, collectRadius);
+                return;
+            }
             clearTask();
         }
     }
@@ -6347,6 +6422,7 @@ public final class NpcManager {
             case MINE_ORES -> "mine_nearby_ore";
             case GATHER_STONE -> "gather_stone";
             case HARVEST_LOGS -> "harvest_logs";
+            case SALVAGE_WOOD_STRUCTURE -> "salvage_nearby_wood_structure";
             case BUILD_BASIC_HOUSE -> "build_basic_house";
             case BUILD_LARGE_HOUSE -> "build_large_house";
             case REPAIR_STRUCTURE -> "repair_structure";
@@ -6361,6 +6437,7 @@ public final class NpcManager {
             case MINE_ORES -> "Mining task not started";
             case GATHER_STONE -> "Stone gathering task not started";
             case HARVEST_LOGS -> "Log harvesting task not started";
+            case SALVAGE_WOOD_STRUCTURE -> "Wooden structure salvage task not started";
             case BUILD_BASIC_HOUSE -> "Building task not started";
             case BUILD_LARGE_HOUSE -> "Large building task not started";
             case REPAIR_STRUCTURE -> "Structure repair task not started";
@@ -6462,6 +6539,7 @@ public final class NpcManager {
         MINE_ORES,
         GATHER_STONE,
         HARVEST_LOGS,
+        SALVAGE_WOOD_STRUCTURE,
         BUILD_BASIC_HOUSE,
         BUILD_LARGE_HOUSE,
         REPAIR_STRUCTURE,

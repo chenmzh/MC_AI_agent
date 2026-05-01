@@ -165,7 +165,7 @@ public final class DevTestHttpServer {
             return new JsonResponse(200, onServer(uri, server -> runAction(server, uri, action)));
         }
 
-        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, GET /blueprints, GET /machines, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|gather_stone|gather_materials|preview_structure|build_structure|cancel_structure|preview_machine|authorize_machine_plan|build_machine|test_machine|cancel_machine_build|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
+        JsonObject notFound = error("NOT_FOUND", "Supported endpoints: GET /health, GET /state, GET /runtime, GET /observation, GET /skills, GET /blueprints, GET /machines, POST /voice/transcript, POST /test/runtime, POST /test/agent_contracts, POST /test/taskgraph_next, POST /test/chest, POST /test/all, POST /taskgraph/next, POST /action/<collect_items|harvest_logs|salvage_nearby_wood_structure|gather_stone|gather_materials|preview_structure|build_structure|cancel_structure|preview_machine|authorize_machine_plan|build_machine|test_machine|cancel_machine_build|survival_assist|till_field|plant_crop|harvest_crops|hunt_food_animal|feed_animal|breed_animals|tame_animal|build_redstone_template|build_basic_house|build_large_house|repair_structure|start_plan|taskgraph_next|continue_plan|report_plan|cancel_plan|inspect_block|break_block|place_block|craft_item|craft_at_table|craft_from_chest_at_table|withdraw_from_chest|deposit_item_to_chest|approve_chest_materials|revoke_chest_materials|equip_best_gear|stop|stop_guard|come|follow>.");
         return new JsonResponse(404, notFound);
     }
 
@@ -196,6 +196,7 @@ public final class DevTestHttpServer {
         endpoints.add("POST /voice/transcript?player=<name>&text=<spoken text>");
         endpoints.add("POST /action/collect_items?player=<name>&radius=16");
         endpoints.add("POST /action/harvest_logs?player=<name>&radius=16&seconds=90");
+        endpoints.add("POST /action/salvage_nearby_wood_structure?player=<name>&radius=16&count=12");
         endpoints.add("POST /action/gather_stone?player=<name>&radius=16&count=3");
         endpoints.add("POST /action/survival_assist?player=<name>");
         endpoints.add("POST /action/till_field?player=<name>&radius=8");
@@ -481,6 +482,7 @@ public final class DevTestHttpServer {
                 : new JsonArray();
         json.add("taskControllerCatalog", taskControllerCatalog);
         requireTaskControllerParallelSafe(taskControllerCatalog, "collect_items", true, failures);
+        requireTaskControllerParallelSafe(taskControllerCatalog, "salvage_nearby_wood_structure", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "build_basic_house", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "build_large_house", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "repair_structure", false, failures);
@@ -492,6 +494,7 @@ public final class DevTestHttpServer {
         requireTaskControllerParallelSafe(taskControllerCatalog, "build_machine", false, failures);
         requireTaskControllerParallelSafe(taskControllerCatalog, "test_machine", true, failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "collect_items", failures);
+        requireTaskControllerPlannerContract(taskControllerCatalog, "salvage_nearby_wood_structure", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "gather_materials", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "preview_structure", failures);
         requireTaskControllerPlannerContract(taskControllerCatalog, "build_structure", failures);
@@ -624,6 +627,7 @@ public final class DevTestHttpServer {
         requirePrimitive(primitives, "build_machine", failures);
         requirePrimitive(primitives, "test_machine", failures);
         requirePrimitive(primitives, "cancel_machine_build", failures);
+        requirePrimitive(primitives, "salvage_nearby_wood_structure", failures);
         requirePrimitive(primitives, "break_block", failures);
         requirePrimitive(primitives, "place_block", failures);
         requirePrimitive(primitives, "gather_stone", failures);
@@ -689,6 +693,15 @@ public final class DevTestHttpServer {
                 json.addProperty("radius", radius);
                 json.addProperty("seconds", seconds);
                 json.addProperty("note", "Started log harvesting. Poll /state until npc.task returns to idle before starting build_basic_house or build_large_house.");
+            }
+            case "salvage_nearby_wood_structure" -> {
+                int radius = intQueryParam(uri, "radius", McAiConfig.NPC_TASK_RADIUS.get(), 4, 32);
+                int count = intQueryParam(uri, "count", McAiConfig.NPC_MAX_TASK_STEPS.get(), 1, McAiConfig.NPC_MAX_TASK_STEPS.get());
+                NpcManager.salvageNearbyWoodStructure(player, radius, count);
+                json.addProperty("started", true);
+                json.addProperty("radius", radius);
+                json.addProperty("count", count);
+                json.addProperty("note", "Started nearby wooden structure salvage from the player's current position. Poll /state until npc.task returns to idle.");
             }
             case "gather_stone" -> {
                 int radius = intQueryParam(uri, "radius", McAiConfig.NPC_TASK_RADIUS.get(), 4, 32);

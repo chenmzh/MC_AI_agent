@@ -383,7 +383,7 @@ public final class TaskGraphPlanner {
 
     private static String safetyLevelForAction(String action) {
         String normalized = normalize(action);
-        if (normalized.equals("break_block") || normalized.equals("place_block") || normalized.equals("build_structure") || normalized.equals("build_machine") || normalized.equals("build_redstone_template") || normalized.equals("build_basic_house") || normalized.equals("build_basic_shelter") || normalized.equals("build_large_house") || normalized.equals("repair_structure")) {
+        if (normalized.equals("break_block") || normalized.equals("place_block") || normalized.equals("salvage_nearby_wood_structure") || normalized.equals("build_structure") || normalized.equals("build_machine") || normalized.equals("build_redstone_template") || normalized.equals("build_basic_house") || normalized.equals("build_basic_shelter") || normalized.equals("build_large_house") || normalized.equals("repair_structure")) {
             return "destructive";
         }
         if (normalized.equals("withdraw_from_chest") || normalized.equals("deposit_to_chest") || normalized.equals("use_mod_wrench")) {

@@ -121,6 +121,12 @@ public final class ActionPrimitiveRegistry {
                     NpcManager.harvestLogs(player, radius(args), durationSeconds(args));
                     return ActionResult.started("STARTED", "NPC started bounded log harvesting.");
                 });
+                case "salvage_nearby_wood_structure", "salvage_wood_structure", "reclaim_wood_structure", "demolish_wood_structure" -> withNpc(player, "salvage_nearby_wood_structure", () -> {
+                    int targetCount = count(args, McAiConfig.NPC_MAX_TASK_STEPS.get());
+                    NpcManager.salvageNearbyWoodStructure(player, radius(args), targetCount);
+                    return ActionResult.started("STARTED", "NPC started bounded nearby wooden structure salvage.")
+                            .withEffect("targetCount", targetCount);
+                });
                 case "mine_nearby_ore", "mine" -> withNpc(player, "mine_nearby_ore", () -> {
                     NpcManager.mineOres(player, radius(args));
                     return ActionResult.started("STARTED", "NPC started mining nearby exposed ore.");
